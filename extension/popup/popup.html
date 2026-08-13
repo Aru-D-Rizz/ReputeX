@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReputeX Reputation Assessment</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    
+    <!-- Header -->
+    <div class="header">
+      <div class="brand">
+        <div class="brand-icon">⚡</div>
+        <div>
+          <div class="brand-title">ReputeX</div>
+          <div class="brand-sub">XAI Web3 Wallet Reputation</div>
+        </div>
+      </div>
+      <div class="toggle-wrapper">
+        <span class="toggle-label" id="toggle-text">Active</span>
+        <label class="switch">
+          <input type="checkbox" id="reputex-toggle" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Page Status Banner -->
+    <div class="status-banner">
+      <div class="status-info">
+        <div class="status-dot" id="status-dot"></div>
+        <div class="status-text" id="page-scan-status">Auto-Scanner Active</div>
+      </div>
+      <button class="rescan-btn" id="rescan-tab-btn">Rescan Page</button>
+    </div>
+
+    <!-- Detected Page Wallets Section -->
+    <div class="page-wallets-section">
+      <div class="section-header-row">
+        <div class="section-title">Detected Wallets on Page</div>
+        <span class="wallet-count-pill" id="page-wallet-count">0 found</span>
+      </div>
+      <div class="detected-wallet-list" id="detected-wallet-list">
+        <div class="empty-wallets-msg">Scanning active tab for wallet addresses...</div>
+      </div>
+    </div>
+
+    <!-- Manual Search Section -->
+    <div class="search-section">
+      <div class="section-title">Manual Address Checker</div>
+      <div class="input-group">
+        <input type="text" id="manual-addr-input" class="address-input" placeholder="Paste 0x... or ENS address">
+        <button id="scan-addr-btn" class="btn-primary">Scan</button>
+      </div>
+      <div class="quick-chips">
+        <span class="chip" data-addr="0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045">Vitalik.eth</span>
+        <span class="chip" data-addr="0x70997970C51812dc3A010C7d01b50e0d17dc79C8">Phishing Drainer</span>
+        <span class="chip" data-addr="0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D">Uniswap Router</span>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loader" class="loader">
+      <div class="spinner"></div>
+      <div>Querying XAI Reputation Engine...</div>
+    </div>
+
+    <!-- XAI Report View Card -->
+    <div id="result-card" class="result-card hidden">
+      <div class="popup-score-header">
+        <div class="popup-score-ring trusted" id="popup-score-ring">95</div>
+        <div class="popup-addr-meta">
+          <span class="risk-badge trusted" id="popup-risk-badge">TRUSTED</span>
+          <div class="full-addr" id="popup-full-addr">0xd8dA...6045</div>
+          <div id="popup-ens-tag" style="font-size:11px; color:#a5b4fc; margin-top:2px;"></div>
+        </div>
+      </div>
+
+      <div class="mini-grid">
+        <div class="mini-item">
+          <div class="mini-lbl">Wallet Age</div>
+          <div class="mini-val" id="mini-age">--</div>
+        </div>
+        <div class="mini-item">
+          <div class="mini-lbl">Tx Count</div>
+          <div class="mini-val" id="mini-txs">--</div>
+        </div>
+        <div class="mini-item">
+          <div class="mini-lbl">Scam Reports</div>
+          <div class="mini-val" id="mini-reports">--</div>
+        </div>
+        <div class="mini-item">
+          <div class="mini-lbl">Graph Risk</div>
+          <div class="mini-val" id="mini-graph">--</div>
+        </div>
+      </div>
+
+      <div class="factors-box">
+        <div class="factors-sub">XAI Trust & Risk Signals</div>
+        <div class="factor-chip-list" id="popup-factor-list">
+          <!-- Dynamic Factors -->
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

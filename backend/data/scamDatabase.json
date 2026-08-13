@@ -1,0 +1,56 @@
+{
+  "knownScams": {
+    "0x0000000000000000000000000000000000000000": {
+      "type": "NULL_DRAINER",
+      "riskLevel": "HIGH_RISK",
+      "scamReports": 142,
+      "details": "Associated with fake token drainer contracts and phishing scam sites."
+    },
+    "0x95222290DD7278Aa3Ddd389Cc1E1d165CC4BAfe5": {
+      "type": "MEV_EXPLOITER",
+      "riskLevel": "CAUTION",
+      "scamReports": 12,
+      "details": "Aggressive front-running MEV bot. High sandwich transaction frequency."
+    },
+    "0x00000000006c3852cbEf3e08E8dF289169EdE581": {
+      "type": "VERIFIED_PROTOCOL",
+      "riskLevel": "TRUSTED",
+      "scamReports": 0,
+      "details": "Seaport 1.1 Marketplace (OpenSea)"
+    },
+    "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D": {
+      "type": "VERIFIED_PROTOCOL",
+      "riskLevel": "TRUSTED",
+      "scamReports": 0,
+      "details": "Uniswap V2 Router Contract"
+    },
+    "0xE592427A0AEce92De3Edee1F18E0157C05861564": {
+      "type": "VERIFIED_PROTOCOL",
+      "riskLevel": "TRUSTED",
+      "scamReports": 0,
+      "details": "Uniswap V3 SwapRouter"
+    },
+    "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045": {
+      "type": "VERIFIED_IDENTITY",
+      "riskLevel": "TRUSTED",
+      "scamReports": 0,
+      "ens": "vitalik.eth",
+      "details": "Vitalik Buterin's Primary Wallet Address"
+    },
+    "0x70997970C51812dc3A010C7d01b50e0d17dc79C8": {
+      "type": "PHISHING_DRAINER",
+      "riskLevel": "HIGH_RISK",
+      "scamReports": 89,
+      "details": "Active NFT approval drainer flagged across Web3 security databases."
+    },
+    "0x3C44CdD0467883860680aAAba2e038246876756B": {
+      "type": "SUSPICIOUS_AIRDROP",
+      "riskLevel": "HIGH_RISK",
+      "scamReports": 45,
+      "details": "Spam token issuer sending phishing links in token transfer memo data."
+    }
+  },
+  "trustedProtocols": [
+    "Uniswap", "Aave", "OpenSea", "Compound", "Curve", "Lido", "MakerDAO", "1inch", "Balancer", "Sushiswap"
+  ]
+}
