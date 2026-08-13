@@ -27,8 +27,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const factorList = document.getElementById('popup-factor-list');
 
   let activeReportsMap = {};
+  let detectedWallets = [];
 
-  // Load extension active state
+  // Load extension active toggle state
   chrome.runtime.sendMessage({ action: 'GET_REPUTEX_STATE' }, (res) => {
     if (chrome.runtime.lastError) return;
     const isEnabled = res && res.enabled !== false;
@@ -59,30 +60,39 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Load detected page wallets
-  loadDetectedPageWallets();
+  // AUTO-RUN SCAN AUTOMATICALLY EACH TIME EXTENSION OPENS
+  autoScanActiveTab();
 
-  function loadDetectedPageWallets() {
-    chrome.storage.local.get(['reputex_page_wallets', 'reputex_page_reports', 'reputex_selected_wallet'], (stored) => {
-      const wallets = stored.reputex_page_wallets || [];
-      const reports = stored.reputex_page_reports || {};
-      const selectedAddr = stored.reputex_selected_wallet;
+  function autoScanActiveTab() {
+    pageWalletCount.textContent = 'Scanning...';
+    detectedWalletList.innerHTML = `<div class="empty-wallets-msg">Scanning active tab for wallet addresses...</div>`;
 
-      activeReportsMap = reports;
-      renderDetectedWallets(wallets, reports, selectedAddr);
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0] && tabs[0].id) {
+        // Send scan command to active tab content script
+        chrome.tabs.sendMessage(tabs[0].id, { action: 'SCAN_PAGE_WALLETS' }, (res) => {
+          if (chrome.runtime.lastError || !res) {
+            // Fallback to local storage if content script message fails
+            chrome.storage.local.get(['reputex_page_wallets', 'reputex_page_reports', 'reputex_selected_wallet'], (stored) => {
+              detectedWallets = stored.reputex_page_wallets || [];
+              activeReportsMap = stored.reputex_page_reports || {};
+              renderDetectedWallets(detectedWallets, activeReportsMap, stored.reputex_selected_wallet);
+            });
+            return;
+          }
 
-      // Query active tab directly for live dynamic updates
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs[0] && tabs[0].id) {
-          chrome.tabs.sendMessage(tabs[0].id, { action: 'GET_DETECTED_PAGE_WALLETS' }, (res) => {
-            if (chrome.runtime.lastError) return;
-            if (res && res.wallets) {
-              activeReportsMap = Object.assign({}, reports, res.reports || {});
-              renderDetectedWallets(res.wallets, activeReportsMap, selectedAddr);
-            }
-          });
-        }
-      });
+          if (res && res.wallets) {
+            detectedWallets = res.wallets;
+            activeReportsMap = res.reports || {};
+            chrome.storage.local.get(['reputex_selected_wallet'], (stored) => {
+              renderDetectedWallets(detectedWallets, activeReportsMap, stored.reputex_selected_wallet);
+            });
+          }
+        });
+      } else {
+        pageWalletCount.textContent = '0 found';
+        detectedWalletList.innerHTML = `<div class="empty-wallets-msg">No active browser tab found.</div>`;
+      }
     });
   }
 
@@ -101,46 +111,53 @@ document.addEventListener('DOMContentLoaded', () => {
       item.className = 'detected-wallet-item';
       if (selectedAddr && selectedAddr.toLowerCase() === addr.toLowerCase()) {
         item.classList.add('selected');
-        performManualScan(addr);
       }
 
       const rData = reports[addr];
-      const riskClass = rData ? rData.riskLevel.toLowerCase() : 'trusted';
-      const badgeText = rData ? `${rData.score} ${rData.riskLevel.replace('_', ' ')}` : 'Scanning...';
+      let riskClass = 'caution';
+      let badgeText = 'Click to Check';
 
-      const short = `${addr.substring(0, 8)}...${addr.substring(34)}`;
+      if (rData) {
+        riskClass = rData.riskLevel.toLowerCase();
+        badgeText = `${rData.score} ${rData.riskLevel.replace('_', ' ')}`;
+      }
+
+      const short = addr.length > 20 ? `${addr.substring(0, 8)}...${addr.substring(addr.length - 6)}` : addr;
       item.innerHTML = `
         <div class="d-addr">${short}</div>
         <div class="d-badge ${riskClass}">${badgeText}</div>
       `;
 
+      // CLICK WALLET TO GET SCORE ON-DEMAND
       item.addEventListener('click', () => {
         document.querySelectorAll('.detected-wallet-item').forEach(el => el.classList.remove('selected'));
         item.classList.add('selected');
         addrInput.value = addr;
         chrome.storage.local.set({ reputex_selected_wallet: addr });
-        performManualScan(addr);
+        
+        // Fetch and display score
+        performManualScan(addr, (data) => {
+          reports[addr] = data;
+          const badgeEl = item.querySelector('.d-badge');
+          if (badgeEl) {
+            badgeEl.className = `d-badge ${data.riskLevel.toLowerCase()}`;
+            badgeEl.textContent = `${data.score} ${data.riskLevel.replace('_', ' ')}`;
+          }
+        });
       });
 
       detectedWalletList.appendChild(item);
     });
 
-    if (!selectedAddr && wallets.length > 0 && resultCard.classList.contains('hidden')) {
-      performManualScan(wallets[0]);
+    // If pre-selected wallet exists, display its report
+    if (selectedAddr && wallets.includes(selectedAddr)) {
+      performManualScan(selectedAddr);
     }
   }
 
-  // Handle Rescan Active Tab
+  // Handle Manual Rescan Button
   rescanBtn.addEventListener('click', () => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0] && tabs[0].id) {
-        chrome.tabs.sendMessage(tabs[0].id, {
-          action: 'REPUTEX_STATE_CHANGED',
-          enabled: toggleInput.checked
-        }).catch(() => {});
-        setTimeout(loadDetectedPageWallets, 500);
-      }
-    });
+    autoScanActiveTab();
   });
 
   // Handle Quick Chips
@@ -168,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  function performManualScan(address) {
+  function performManualScan(address, onComplete) {
     loader.style.display = 'block';
     resultCard.classList.add('hidden');
 
@@ -183,6 +200,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       if (response && response.data) {
         renderReport(response.data);
+        if (onComplete) onComplete(response.data);
       }
     });
   }
@@ -199,7 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
     riskBadge.className = `risk-badge ${data.riskLevel.toLowerCase()}`;
 
     // Address & ENS
-    const shortAddr = `${data.address.substring(0, 10)}...${data.address.substring(34)}`;
+    const shortAddr = data.address.length > 20 ? `${data.address.substring(0, 10)}...${data.address.substring(data.address.length - 8)}` : data.address;
     fullAddr.textContent = shortAddr;
     ensTag.textContent = data.ens ? `🏷️ ${data.ens}` : (data.metrics.verifiedLabel ? `🏷️ ${data.metrics.verifiedLabel}` : '');
 

@@ -26,7 +26,7 @@ Known Threat Warning: ${metrics.knownThreat || 'None'}
 Return ONLY a JSON object with 2 keys: "summary" and "recommendation".`;
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5s fast timeout
 
     const response = await fetch(TOKENREPLY_API_URL, {
       method: 'POST',

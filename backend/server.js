@@ -18,7 +18,7 @@ app.get('/health', (req, res) => {
 /**
  * Single Wallet / ENS Domain Analysis Endpoint
  * POST /api/reputation/analyze
- * Body: { address: "0x..." or "vitalik.eth" }
+ * Body: { address: "0x..." or "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa" or "vitalik.eth" }
  */
 app.post('/api/reputation/analyze', async (req, res) => {
   try {
@@ -30,12 +30,13 @@ app.post('/api/reputation/analyze', async (req, res) => {
 
     const cleanInput = address.trim();
 
-    // Validation pattern for EVM address, Solana, or ENS/Web3 domain string
+    // Validation pattern for EVM address, Solana, Bitcoin, or ENS/Web3 domain string
     const evmPattern = /^0x[a-fA-F0-9]{40}$/;
+    const btcPattern = /^(bc1[a-zA-Z0-9]{8,87}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/;
     const solanaPattern = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
     const domainPattern = /^[a-zA-Z0-9-]+\.(eth|org|io|crypto|wallet|dao)$/i;
 
-    if (!evmPattern.test(cleanInput) && !solanaPattern.test(cleanInput) && !domainPattern.test(cleanInput)) {
+    if (!evmPattern.test(cleanInput) && !btcPattern.test(cleanInput) && !solanaPattern.test(cleanInput) && !domainPattern.test(cleanInput)) {
       return res.status(400).json({ error: 'Invalid wallet address or ENS domain format.' });
     }
 
@@ -52,7 +53,7 @@ app.post('/api/reputation/analyze', async (req, res) => {
 /**
  * Batch Wallet Analysis Endpoint (For Extension Webpage Content Script)
  * POST /api/reputation/batch
- * Body: { addresses: ["0x...", "0x..."] }
+ * Body: { addresses: ["0x...", "1A1zP1..."] }
  */
 app.post('/api/reputation/batch', async (req, res) => {
   try {

@@ -4,7 +4,7 @@
   let cachedReputationData = {};
   const scannedAddresses = new Set();
 
-  const EVM_REGEX = /\b(0x[a-fA-F0-9]{40})\b/g;
+  const ADDRESS_REGEX = /(0x[a-fA-F0-9]{40}|bc1[a-zA-Z0-9]{8,87}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})/g;
 
   // Initialize
   init();
@@ -13,10 +13,7 @@
     // Query background for extension status
     try {
       chrome.runtime.sendMessage({ action: 'GET_REPUTEX_STATE' }, (response) => {
-        if (chrome.runtime.lastError) {
-          console.warn('[ReputeX Content Script] Background communication error:', chrome.runtime.lastError);
-          return;
-        }
+        if (chrome.runtime.lastError) return;
         if (response) {
           isExtensionEnabled = response.enabled !== false;
           if (isExtensionEnabled) {
@@ -25,10 +22,10 @@
         }
       });
     } catch (e) {
-      console.warn('[ReputeX Content Script] Initialization error:', e);
+      console.warn('[ReputeX Content Script] Init notice:', e);
     }
 
-    // Listen for state change events or request for detected page wallets
+    // Listen for messages from Popup UI
     chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       if (msg.action === 'REPUTEX_STATE_CHANGED') {
         isExtensionEnabled = msg.enabled;
@@ -38,12 +35,15 @@
         } else {
           scanDOM();
         }
-      } else if (msg.action === 'GET_DETECTED_PAGE_WALLETS') {
+        sendResponse({ success: true });
+      } else if (msg.action === 'SCAN_PAGE_WALLETS' || msg.action === 'GET_DETECTED_PAGE_WALLETS') {
+        const foundWallets = scanDOM();
         sendResponse({
-          wallets: Array.from(scannedAddresses),
+          wallets: foundWallets,
           reports: cachedReputationData
         });
       }
+      return true; // Keep channel open for async response
     });
 
     // Observe dynamic DOM changes (e.g. infinite scroll, single page apps)
@@ -55,6 +55,7 @@
 
     if (document.body) {
       observer.observe(document.body, { childList: true, subtree: true });
+      scanDOM();
     }
   }
 
@@ -67,7 +68,7 @@
   }
 
   function scanDOM() {
-    if (!isExtensionEnabled || !document.body) return;
+    if (!isExtensionEnabled || !document.body) return Array.from(scannedAddresses);
 
     const textNodes = [];
     const walk = document.createTreeWalker(
@@ -86,15 +87,17 @@
             tag === 'input' ||
             tag === 'select' ||
             tag === 'noscript' ||
+            tag === 'iframe' ||
             parent.isContentEditable ||
             parent.closest('.reputex-address-wrapper') ||
             parent.closest('#reputex-overlay-card') ||
-            parent.getAttribute('data-reputex-processed') === 'true'
+            node.nodeValue.trim().length < 25
           ) {
             return NodeFilter.FILTER_REJECT;
           }
 
-          if (EVM_REGEX.test(node.nodeValue)) {
+          ADDRESS_REGEX.lastIndex = 0;
+          if (ADDRESS_REGEX.test(node.nodeValue)) {
             return NodeFilter.FILTER_ACCEPT;
           }
           return NodeFilter.FILTER_REJECT;
@@ -107,22 +110,25 @@
       textNodes.push(currentNode);
     }
 
-    const detectedInThisPass = new Set();
-
     textNodes.forEach((node) => {
       const parent = node.parentElement;
-      if (!parent || parent.getAttribute('data-reputex-processed') === 'true') return;
+      if (!parent || parent.closest('.reputex-address-wrapper')) return;
 
       const text = node.nodeValue;
-      EVM_REGEX.lastIndex = 0;
+      ADDRESS_REGEX.lastIndex = 0;
       let match;
 
       const fragment = document.createDocumentFragment();
       let lastIndex = 0;
+      let hasMatch = false;
 
-      while ((match = EVM_REGEX.exec(text)) !== null) {
+      while ((match = ADDRESS_REGEX.exec(text)) !== null) {
         const address = match[0];
-        detectedInThisPass.add(address);
+        
+        // Skip invalid EVM lengths
+        if (address.startsWith('0x') && address.length !== 42) continue;
+
+        hasMatch = true;
         scannedAddresses.add(address);
 
         // Append text prior to match
@@ -138,99 +144,78 @@
         const addrSpan = document.createElement('span');
         addrSpan.className = 'reputex-raw-address';
         addrSpan.textContent = address;
-        addrSpan.title = 'Click to select in ReputeX extension';
-        
-        // Clicking address text selects it for extension popup and toggles card
-        addrSpan.addEventListener('click', (e) => {
-          e.stopPropagation();
-          e.preventDefault();
-          selectWalletForExtension(address);
-          toggleOverlayCard(badge, address);
-        });
-
-        wrapper.appendChild(addrSpan);
+        addrSpan.title = 'Click to inspect score in ReputeX extension';
 
         const badge = document.createElement('span');
         badge.className = 'reputex-inline-badge reputex-badge-loading';
         badge.setAttribute('data-address', address);
-        badge.innerHTML = `🛡️ ReputeX...`;
+        badge.innerHTML = `⚡ ReputeX`;
 
-        // Click / Hover Handler for floating XAI Card
-        badge.addEventListener('click', (e) => {
+        // Click handler: Selects address and requests score
+        const clickHandler = (e) => {
           e.stopPropagation();
           e.preventDefault();
-          selectWalletForExtension(address);
-          toggleOverlayCard(badge, address);
-        });
+          selectAndFetchScore(address, badge);
+        };
 
-        badge.addEventListener('mouseenter', () => {
-          showOverlayCard(badge, address);
-        });
+        addrSpan.addEventListener('click', clickHandler);
+        badge.addEventListener('click', clickHandler);
 
+        wrapper.appendChild(addrSpan);
         wrapper.appendChild(badge);
         fragment.appendChild(wrapper);
 
-        lastIndex = EVM_REGEX.lastIndex;
+        lastIndex = ADDRESS_REGEX.lastIndex;
       }
 
-      // Append remaining text
-      if (lastIndex < text.length) {
-        fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
-      }
-
-      if (parent) {
-        parent.setAttribute('data-reputex-processed', 'true');
-        parent.replaceChild(fragment, node);
+      if (hasMatch) {
+        if (lastIndex < text.length) {
+          fragment.appendChild(document.createTextNode(text.substring(lastIndex)));
+        }
+        if (parent && parent.parentNode) {
+          parent.replaceChild(fragment, node);
+        }
       }
     });
 
-    // Send batch query for newly discovered addresses
-    if (scannedAddresses.size > 0) {
-      const addressArray = Array.from(scannedAddresses);
-      
-      // Store in storage for Popup UI
-      chrome.storage.local.set({ reputex_page_wallets: addressArray });
-
-      if (detectedInThisPass.size > 0) {
-        chrome.runtime.sendMessage(
-          { action: 'ANALYZE_BATCH', addresses: Array.from(detectedInThisPass) },
-          (response) => {
-            if (chrome.runtime.lastError) return;
-            if (response && response.results) {
-              Object.assign(cachedReputationData, response.results);
-              updateBadges(response.results);
-              chrome.storage.local.set({ reputex_page_reports: cachedReputationData });
-            }
-          }
-        );
-      }
-    }
+    const addressList = Array.from(scannedAddresses);
+    chrome.storage.local.set({ reputex_page_wallets: addressList });
+    return addressList;
   }
 
-  function selectWalletForExtension(address) {
+  function selectAndFetchScore(address, badgeElement) {
     chrome.storage.local.set({ reputex_selected_wallet: address });
-  }
 
-  function updateBadges(resultsMap) {
-    const badges = document.querySelectorAll('.reputex-inline-badge');
-    badges.forEach((badge) => {
-      const address = badge.getAttribute('data-address');
-      if (!address || !resultsMap[address]) return;
+    if (cachedReputationData[address]) {
+      toggleOverlayCard(badgeElement, address);
+      return;
+    }
 
-      const data = resultsMap[address];
-      badge.classList.remove('reputex-badge-loading');
+    badgeElement.className = 'reputex-inline-badge reputex-badge-loading';
+    badgeElement.innerHTML = `⏳ Analyzing...`;
 
-      if (data.riskLevel === 'TRUSTED') {
-        badge.classList.add('reputex-badge-trusted');
-        badge.innerHTML = `🛡️ ${data.score} Safe`;
-      } else if (data.riskLevel === 'CAUTION') {
-        badge.classList.add('reputex-badge-caution');
-        badge.innerHTML = `⚠️ ${data.score} Caution`;
-      } else {
-        badge.classList.add('reputex-badge-high-risk');
-        badge.innerHTML = `🚨 ${data.score} Risk`;
+    chrome.runtime.sendMessage({ action: 'ANALYZE_ADDRESS', address: address }, (res) => {
+      if (chrome.runtime.lastError) return;
+      if (res && res.data) {
+        cachedReputationData[address] = res.data;
+        updateSingleBadge(badgeElement, res.data);
+        showOverlayCard(badgeElement, address);
       }
     });
+  }
+
+  function updateSingleBadge(badge, data) {
+    badge.classList.remove('reputex-badge-loading');
+    if (data.riskLevel === 'TRUSTED') {
+      badge.className = 'reputex-inline-badge reputex-badge-trusted';
+      badge.innerHTML = `🛡️ ${data.score} Safe`;
+    } else if (data.riskLevel === 'CAUTION') {
+      badge.className = 'reputex-inline-badge reputex-badge-caution';
+      badge.innerHTML = `⚠️ ${data.score} Caution`;
+    } else {
+      badge.className = 'reputex-inline-badge reputex-badge-high-risk';
+      badge.innerHTML = `🚨 ${data.score} Risk`;
+    }
   }
 
   function removeAllBadges() {
@@ -244,7 +229,7 @@
   }
 
   function toggleOverlayCard(badgeElement, address) {
-    if (activeOverlayCard && activeOverlayCard.getAttribute('data-active-address') === address) {
+    if (activeOverlayCard && activeOverlayCard.getAttribute('data-active-address') === address && activeOverlayCard.classList.contains('reputex-card-visible')) {
       hideOverlayCard();
     } else {
       showOverlayCard(badgeElement, address);
@@ -259,14 +244,12 @@
     const card = activeOverlayCard;
     card.setAttribute('data-active-address', address);
 
-    // Build XAI Card Inner HTML
-    const shortAddr = `${address.substring(0, 8)}...${address.substring(34)}`;
+    const shortAddr = address.length > 20 ? `${address.substring(0, 10)}...${address.substring(address.length - 8)}` : address;
     const ensTagHtml = data.ens ? `<span class="reputex-ens-tag">🏷️ ${data.ens}</span>` : '';
     const riskClass = data.riskLevel.toLowerCase();
 
-    // Positives HTML
     let posHtml = '';
-    if (data.explanation && data.explanation.positiveFactors.length > 0) {
+    if (data.explanation && data.explanation.positiveFactors && data.explanation.positiveFactors.length > 0) {
       posHtml = data.explanation.positiveFactors
         .map(
           (f) => `
@@ -283,9 +266,8 @@
       posHtml = `<div style="font-size:11px; color:#64748b; font-style:italic;">No strong positive trust factors.</div>`;
     }
 
-    // Negatives HTML
     let negHtml = '';
-    if (data.explanation && data.explanation.negativeFactors.length > 0) {
+    if (data.explanation && data.explanation.negativeFactors && data.explanation.negativeFactors.length > 0) {
       negHtml = data.explanation.negativeFactors
         .map(
           (f) => `
@@ -377,17 +359,18 @@
       hideOverlayCard();
     });
 
-    // Position overlay relative to badge
     const rect = badgeElement.getBoundingClientRect();
-    let top = rect.bottom + 8;
-    let left = rect.left;
+    const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+    const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
 
-    // Boundary adjust
-    if (left + 360 > window.innerWidth) {
-      left = Math.max(10, window.innerWidth - 370);
+    let top = rect.bottom + scrollTop + 8;
+    let left = rect.left + scrollLeft;
+
+    if (rect.left + 360 > window.innerWidth) {
+      left = Math.max(10, scrollLeft + window.innerWidth - 380);
     }
-    if (top + 450 > window.innerHeight) {
-      top = Math.max(10, rect.top - 460);
+    if (rect.bottom + 420 > window.innerHeight && rect.top > 420) {
+      top = rect.top + scrollTop - 430;
     }
 
     card.style.top = `${top}px`;
@@ -407,7 +390,6 @@
       activeOverlayCard.id = 'reputex-overlay-card';
       document.body.appendChild(activeOverlayCard);
 
-      // Close on outside click
       document.addEventListener('click', (e) => {
         if (
           activeOverlayCard &&

@@ -56,6 +56,7 @@
       margin-bottom: 12px;
     }
     .tag-etherscan { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+    .tag-btc { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
     .tag-twitter { background: rgba(29, 155, 240, 0.2); color: #38bdf8; }
     .tag-opensea { background: rgba(32, 129, 226, 0.2); color: #93c5fd; }
     .tag-github { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; }
@@ -84,21 +85,39 @@
     <div>
       <div class="demo-title">⚡ ReputeX Web3 Live Test Environment</div>
       <div style="font-size: 13px; color: #94a3b8; margin-top: 4px;">
-        Simulated Web3 platforms (Etherscan, X/Twitter, OpenSea, GitHub) with embedded wallet addresses.
+        Simulated Web3 platforms (Ethereum, Bitcoin, X/Twitter, OpenSea, GitHub) with embedded wallet addresses.
       </div>
     </div>
     <div style="text-align: right;">
       <div style="font-size: 11px; color: #34d399; font-weight:700;">Backend API: Active (Port 5000)</div>
-      <div style="font-size: 11px; color: #94a3b8;">ReputeX Manifest V3 Extension Ready</div>
+      <div style="font-size: 11px; color: #94a3b8;">Blockstream Esplora API & Etherscan V2 Connected</div>
     </div>
   </div>
 
   <div class="demo-grid">
 
+    <!-- Bitcoin Explorer (Blockstream API) -->
+    <div class="platform-card">
+      <span class="platform-tag tag-btc">Bitcoin Blockstream Explorer</span>
+      <h3 style="margin-bottom: 12px; font-size:16px;">Bitcoin Address Records</h3>
+
+      <div class="tx-row">
+        <div><strong>Label:</strong> Satoshi Nakamoto Genesis Wallet</div>
+        <div><strong>BTC Address:</strong> 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa</div>
+        <div><strong>Status:</strong> Block 0 Genesis / 57.34 BTC Received</div>
+      </div>
+
+      <div class="tx-row">
+        <div><strong>Label:</strong> Binance Cold Vault</div>
+        <div><strong>BTC Address:</strong> 34xp4vRoCGJym3xR7yCVPFHoCNxv4Twseo</div>
+        <div><strong>Status:</strong> 248,000 BTC Reserve Balance</div>
+      </div>
+    </div>
+
     <!-- Etherscan Simulation -->
     <div class="platform-card">
       <span class="platform-tag tag-etherscan">Etherscan Explorer</span>
-      <h3 style="margin-bottom: 12px; font-size:16px;">Latest Transactions</h3>
+      <h3 style="margin-bottom: 12px; font-size:16px;">Latest Ethereum Transactions</h3>
       
       <div class="tx-row">
         <div><strong>Tx Hash:</strong> 0x94ab...ef12</div>
@@ -143,33 +162,15 @@
       </div>
     </div>
 
-    <!-- GitHub Repository -->
-    <div class="platform-card">
-      <span class="platform-tag tag-github">GitHub Repository</span>
-      <h3 style="margin-bottom: 12px; font-size:16px;">smart-contract/deploy.config.json</h3>
-
-      <div class="code-block">{
-  "network": "ethereum-mainnet",
-  "deployer": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-  "uniswapRouter": "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
-  "treasuryVault": "0xE592427A0AEce92De3Edee1F18E0157C05861564"
-}</div>
-    </div>
-
   </div>
 
-  <!-- Standalone inline simulator script for testing demo page directly in any browser -->
   <script>
-    // Standalone fallback renderer for direct browser viewing if extension is not yet loaded into browser instance
     window.addEventListener('DOMContentLoaded', async () => {
       const addresses = [
+        "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+        "34xp4vRoCGJym3xR7yCVPFHoCNxv4Twseo",
         "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-        "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
-        "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
-        "0x0000000000000000000000000000000000000000",
-        "0x95222290DD7278Aa3Ddd389Cc1E1d165CC4BAfe5",
-        "0x3C44CdD0467883860680aAAba2e038246876756B",
-        "0xE592427A0AEce92De3Edee1F18E0157C05861564"
+        "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
       ];
 
       try {

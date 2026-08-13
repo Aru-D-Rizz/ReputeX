@@ -55,13 +55,12 @@ const KNOWN_CONTRACT_PROTOCOLS = {
 };
 
 /**
- * Fetch live metrics directly from Etherscan API V2
+ * Fetch live metrics directly from Etherscan API V2 for Ethereum Addresses
  */
 async function fetchEtherscanLiveMetrics(address, ensDomain = null) {
   try {
     const cleanAddr = address.trim();
     
-    // 1. Fetch balance & tx history from Etherscan V2
     const balanceUrl = `https://api.etherscan.io/v2/api?chainid=1&module=account&action=balance&address=${cleanAddr}&tag=latest&apikey=${ETHERSCAN_API_KEY}`;
     const txUrl = `https://api.etherscan.io/v2/api?chainid=1&module=account&action=txlist&address=${cleanAddr}&startblock=0&endblock=99999999&page=1&offset=100&sort=asc&apikey=${ETHERSCAN_API_KEY}`;
 
@@ -78,7 +77,6 @@ async function fetchEtherscanLiveMetrics(address, ensDomain = null) {
     const txList = txRes.result;
     const txCount = txList.length;
 
-    // Wallet age calculation from first transaction timestamp
     let walletAgeDays = 1;
     if (txCount > 0 && txList[0].timeStamp) {
       const firstTxTime = parseInt(txList[0].timeStamp, 10);
@@ -86,16 +84,13 @@ async function fetchEtherscanLiveMetrics(address, ensDomain = null) {
       walletAgeDays = Math.max(1, Math.floor((nowSec - firstTxTime) / 86400));
     }
 
-    // ETH Balance calculation
     let ethBalance = 0;
     if (balRes && balRes.status === '1' && balRes.result) {
       ethBalance = (parseFloat(balRes.result) / 1e18) || 0;
     }
 
-    // Estimate USD volume (ETH Price ~$2600)
     const totalVolumeUSD = parseFloat((ethBalance * 2600 + (txCount * 140)).toFixed(2));
 
-    // Detect protocol interactions from transaction destination targets (OpenSea, Uniswap, Lido)
     const protocolSet = new Set();
     let isContract = false;
 
@@ -138,7 +133,83 @@ async function fetchEtherscanLiveMetrics(address, ensDomain = null) {
 }
 
 /**
- * Aggregated metric provider (combines database, live Etherscan V2 API, and fallback generator)
+ * Fetch live metrics directly from Blockstream Esplora API for Bitcoin (BTC) Addresses
+ */
+async function fetchBlockstreamBtcMetrics(address) {
+  try {
+    const cleanAddr = address.trim();
+    
+    const addressUrl = `https://blockstream.info/api/address/${cleanAddr}`;
+    const txsUrl = `https://blockstream.info/api/address/${cleanAddr}/txs`;
+
+    const [addrRes, txsRes] = await Promise.all([
+      fetch(addressUrl).then(r => r.json()).catch(() => null),
+      fetch(txsUrl).then(r => r.json()).catch(() => null)
+    ]);
+
+    if (!addrRes || !addrRes.chain_stats) {
+      console.warn(`[Blockstream Esplora API] Notice for ${cleanAddr}: Unindexed or invalid Bitcoin address.`);
+      return null;
+    }
+
+    const stats = addrRes.chain_stats;
+    const txCount = stats.tx_count || 0;
+
+    // Satoshis calculation
+    const fundedSatoshis = stats.funded_txo_sum || 0;
+    const spentSatoshis = stats.spent_txo_sum || 0;
+    const btcBalance = (fundedSatoshis - spentSatoshis) / 1e8;
+    const totalVolumeBtc = fundedSatoshis / 1e8;
+    const totalVolumeUSD = parseFloat((totalVolumeBtc * 60000).toFixed(2)); // BTC price ~$60,000
+
+    // Wallet age from earliest transaction timestamp in txs array if available
+    let walletAgeDays = 365;
+    if (Array.isArray(txsRes) && txsRes.length > 0) {
+      const lastTx = txsRes[txsRes.length - 1];
+      if (lastTx && lastTx.status && lastTx.status.block_time) {
+        const firstTxTime = lastTx.status.block_time;
+        const nowSec = Math.floor(Date.now() / 1000);
+        walletAgeDays = Math.max(1, Math.floor((nowSec - firstTxTime) / 86400));
+      }
+    }
+
+    // Special label for Genesis address
+    let verifiedLabel = null;
+    if (cleanAddr === '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa') {
+      verifiedLabel = "Satoshi Nakamoto Genesis Address";
+      walletAgeDays = 6000;
+    }
+
+    const protocolInteractions = ["Bitcoin Mainnet"];
+    if (cleanAddr.startsWith('bc1q') || cleanAddr.startsWith('bc1p')) {
+      protocolInteractions.push("Native SegWit / Taproot");
+    } else if (cleanAddr.startsWith('3')) {
+      protocolInteractions.push("P2SH Script");
+    }
+
+    return {
+      address: cleanAddr,
+      ens: null,
+      walletAgeDays: walletAgeDays,
+      totalTxCount: txCount,
+      totalVolumeUSD: totalVolumeUSD,
+      scamReportCount: 0,
+      maliciousProximityScore: 0,
+      protocolInteractions: protocolInteractions,
+      isContract: false,
+      verifiedLabel: verifiedLabel,
+      knownThreat: null,
+      dataSource: "LIVE_BLOCKSTREAM_ESPLORA_API"
+    };
+
+  } catch (err) {
+    console.error('[Blockstream Esplora API Error]:', err);
+    return null;
+  }
+}
+
+/**
+ * Aggregated metric provider (combines database, live Etherscan V2, Blockstream Esplora, and fallback generator)
  */
 async function fetchWalletMetrics(addressInput) {
   let normalizedAddr = addressInput.trim();
@@ -152,7 +223,6 @@ async function fetchWalletMetrics(addressInput) {
     lowerAddr = normalizedAddr.toLowerCase();
   } else if (lowerAddr.endsWith('.eth') || lowerAddr.endsWith('.org')) {
     resolvedEnsName = lowerAddr;
-    // Generate deterministic 0x address for unindexed domain names
     const domainHash = hashAddress(lowerAddr).toString(16).padStart(40, '0');
     normalizedAddr = `0x${domainHash.substring(0, 40)}`;
     lowerAddr = normalizedAddr.toLowerCase();
@@ -198,7 +268,16 @@ async function fetchWalletMetrics(addressInput) {
     }
   }
 
-  // Attempt Live Etherscan API V2 Fetch for EVM addresses
+  // Bitcoin Address Pattern Match (P2PKH '1...', P2SH '3...', Bech32 'bc1q...', Taproot 'bc1p...')
+  const btcPattern = /^(bc1[a-zA-Z0-9]{8,87}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/;
+  if (btcPattern.test(normalizedAddr)) {
+    const liveBtcData = await fetchBlockstreamBtcMetrics(normalizedAddr);
+    if (liveBtcData) {
+      return liveBtcData;
+    }
+  }
+
+  // Ethereum EVM Address Match
   if (normalizedAddr.startsWith('0x') && normalizedAddr.length === 42) {
     const liveEtherscanData = await fetchEtherscanLiveMetrics(normalizedAddr, resolvedEnsName);
     if (liveEtherscanData) {

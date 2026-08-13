@@ -92,7 +92,7 @@
 
 /* Floating XAI Reputation Card Overlay */
 #reputex-overlay-card {
-  position: fixed;
+  position: absolute;
   z-index: 2147483647; /* Maximum z-index */
   width: 360px;
   max-width: 90vw;
