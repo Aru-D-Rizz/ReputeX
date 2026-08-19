@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reputex-backend
+  namespace: reputex
+  labels:
+    app.kubernetes.io/name: reputex-backend
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: reputex
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: reputex-backend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: reputex-backend
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      containers:
+        - name: reputex-api
+          image: ghcr.io/aru-d-rizz/reputex-backend:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+              name: http-api
+          envFrom:
+            - configMapRef:
+                name: reputex-backend-config
+            - secretRef:
+                name: reputex-backend-secret
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 3
+            failureThreshold: 3

@@ -1,0 +1,34 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: reputex-backend-ingress
+  namespace: reputex
+  labels:
+    app.kubernetes.io/name: reputex-backend
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: reputex
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://reputex.vercel.app, https://*.vercel.app"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "8m"
+spec:
+  tls:
+    - hosts:
+        - api.reputex.com
+      secretName: reputex-api-tls
+  rules:
+    - host: api.reputex.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: reputex-backend-service
+                port:
+                  number: 80

@@ -6,35 +6,41 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(99, 102, 241, 0.12);
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  padding: 2px 6px;
-  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.35), rgba(168, 85, 247, 0.35)) !important;
+  border: 1.5px solid #818cf8 !important;
+  padding: 3px 8px !important;
+  border-radius: 8px !important;
   font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
-  vertical-align: baseline;
-  transition: all 0.2s ease;
-  box-shadow: 0 0 8px rgba(99, 102, 241, 0.15);
+  vertical-align: middle !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  box-shadow: 0 0 12px rgba(129, 140, 248, 0.45) !important;
+  z-index: 1000 !important;
 }
 
 .reputex-address-wrapper:hover {
-  background: rgba(99, 102, 241, 0.22);
-  border-color: rgba(168, 85, 247, 0.5);
-  box-shadow: 0 0 12px rgba(168, 85, 247, 0.3);
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.55), rgba(168, 85, 247, 0.55)) !important;
+  border-color: #c084fc !important;
+  box-shadow: 0 0 16px rgba(192, 132, 252, 0.6) !important;
+  transform: translateY(-1px) scale(1.02) !important;
 }
 
 .reputex-raw-address {
   font-family: monospace !important;
-  font-weight: 600;
-  color: #c7d2fe;
-  cursor: pointer;
-  background: rgba(99, 102, 241, 0.2);
-  padding: 1px 4px;
-  border-radius: 4px;
+  font-weight: 700 !important;
+  font-size: 12px !important;
+  color: #ffffff !important;
+  cursor: pointer !important;
+  background: rgba(15, 23, 42, 0.85) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  padding: 2px 6px !important;
+  border-radius: 6px !important;
+  letter-spacing: 0.3px !important;
 }
 
 .reputex-raw-address:hover {
-  color: #ffffff;
-  text-decoration: underline;
+  color: #a7f3d0 !important;
+  border-color: #34d399 !important;
+  text-decoration: none !important;
 }
 
 .reputex-inline-badge {
@@ -93,8 +99,8 @@
 /* Floating XAI Reputation Card Overlay */
 #reputex-overlay-card {
   position: absolute;
-  z-index: 2147483647; /* Maximum z-index */
-  width: 360px;
+  z-index: 2147483647;
+  width: 380px;
   max-width: 90vw;
   background: rgba(15, 23, 42, 0.96);
   backdrop-filter: blur(16px);
@@ -165,7 +171,7 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   background: rgba(30, 41, 59, 0.6);
   padding: 12px;
   border-radius: 12px;
@@ -226,6 +232,65 @@
   margin-top: 4px;
 }
 
+/* Classification Box */
+.reputex-classification-box {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+}
+
+.reputex-class-title {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #a5b4fc;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.reputex-class-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.reputex-class-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10.5px;
+}
+
+.reputex-class-lbl {
+  width: 95px;
+  color: #cbd5e1;
+  font-weight: 500;
+}
+
+.reputex-class-track {
+  flex-grow: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.reputex-class-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1, #a855f7);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.reputex-class-pct {
+  width: 32px;
+  text-align: right;
+  font-weight: 700;
+  color: #c084fc;
+}
+
 /* Metrics Grid */
 .reputex-metrics-grid {
   display: grid;
@@ -273,7 +338,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  max-height: 180px;
+  max-height: 140px;
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -349,6 +414,93 @@
   background: rgba(16, 185, 129, 0.1);
   padding: 4px 8px;
   border-radius: 6px;
+}
+
+/* Interactive Hover Card Chat Assistant */
+.reputex-hover-chat-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  padding: 10px;
+  border-radius: 10px;
+  margin-top: 10px;
+}
+
+.reputex-hover-chat-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #c084fc;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.reputex-hover-chat-chips {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.reputex-hover-chat-chip {
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  color: #e9d5ff;
+  font-size: 9.5px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.reputex-hover-chat-chip:hover {
+  background: rgba(168, 85, 247, 0.3);
+  color: #fff;
+}
+
+.reputex-hover-chat-group {
+  display: flex;
+  gap: 5px;
+}
+
+.reputex-hover-chat-input {
+  flex-grow: 1;
+  background: rgba(30, 41, 59, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 6px 8px;
+  color: #fff;
+  font-size: 11px;
+  outline: none;
+}
+
+.reputex-hover-chat-input:focus {
+  border-color: #c084fc;
+}
+
+.reputex-hover-chat-btn {
+  background: linear-gradient(135deg, #a855f7, #6366f1);
+  color: #fff;
+  border: none;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.reputex-hover-chat-response {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #e2e8f0;
+}
+
+.reputex-hidden {
+  display: none !important;
 }
 
 .reputex-card-footer {

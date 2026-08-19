@@ -1,0 +1,35 @@
+{
+  "version": 2,
+  "name": "reputex-frontend",
+  "cleanUrls": true,
+  "outputDirectory": "demo",
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "https://api.reputex.com/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/demo.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        }
+      ]
+    }
+  ]
+}
