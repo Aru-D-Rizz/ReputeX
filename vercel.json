@@ -2,14 +2,26 @@
   "version": 2,
   "name": "reputex",
   "cleanUrls": true,
-  "rewrites": [
+  "routes": [
     {
-      "source": "/health",
-      "destination": "/api/index.js"
+      "src": "/health",
+      "dest": "/api/index.js"
     },
     {
-      "source": "/api/(.*)",
-      "destination": "/api/index.js"
+      "src": "/api/(.*)",
+      "dest": "/api/index.js"
+    },
+    {
+      "src": "/demo/demo.html",
+      "dest": "/demo/demo.html"
+    },
+    {
+      "src": "/demo/(.*)",
+      "dest": "/demo/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ],
   "headers": [
