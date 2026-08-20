@@ -1,8 +1,9 @@
 /**
  * ReputeX Background Service Worker - Manifest V3 Compliant
  * Enforces HTTPS API calls, format checksum validation, and resilient AI Chat routing.
+ * Automatically connects to production Vercel Serverless API with local dev fallback.
  */
-const SECURE_API_BASE_URL = 'https://api.blockstream.info';
+const VERCEL_API_BASE_URL = 'https://reputex.vercel.app/api/reputation';
 const LOCAL_API_BASE_URL = 'http://127.0.0.1:5000/api/reputation';
 const cache = new Map();
 
@@ -141,34 +142,82 @@ function validateAddressFormat(address) {
   return false;
 }
 
-async function fetchWalletChat(address, question, context) {
-  const response = await fetch(`${LOCAL_API_BASE_URL}/chat`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ address, question, context })
+async function getApiBaseUrl() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['reputex_custom_api_url'], (data) => {
+      if (data && data.reputex_custom_api_url) {
+        resolve(data.reputex_custom_api_url.replace(/\/$/, ''));
+      } else {
+        resolve(VERCEL_API_BASE_URL);
+      }
+    });
   });
-  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-  return await response.json();
+}
+
+async function fetchWalletChat(address, question, context) {
+  const primaryUrl = await getApiBaseUrl();
+  try {
+    const response = await fetch(`${primaryUrl}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address, question, context })
+    });
+    if (response.ok) return await response.json();
+  } catch (err) {
+    if (primaryUrl !== LOCAL_API_BASE_URL) {
+      const fallbackResponse = await fetch(`${LOCAL_API_BASE_URL}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address, question, context })
+      });
+      if (fallbackResponse.ok) return await fallbackResponse.json();
+    }
+    throw err;
+  }
 }
 
 async function fetchReputationSingle(address) {
-  const response = await fetch(`${LOCAL_API_BASE_URL}/analyze`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ address })
-  });
-  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-  return await response.json();
+  const primaryUrl = await getApiBaseUrl();
+  try {
+    const response = await fetch(`${primaryUrl}/analyze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ address })
+    });
+    if (response.ok) return await response.json();
+  } catch (err) {
+    if (primaryUrl !== LOCAL_API_BASE_URL) {
+      const fallbackResponse = await fetch(`${LOCAL_API_BASE_URL}/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address })
+      });
+      if (fallbackResponse.ok) return await fallbackResponse.json();
+    }
+    throw err;
+  }
 }
 
 async function fetchReputationBatch(addresses) {
-  const response = await fetch(`${LOCAL_API_BASE_URL}/batch`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ addresses })
-  });
-  if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-  return await response.json();
+  const primaryUrl = await getApiBaseUrl();
+  try {
+    const response = await fetch(`${primaryUrl}/batch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ addresses })
+    });
+    if (response.ok) return await response.json();
+  } catch (err) {
+    if (primaryUrl !== LOCAL_API_BASE_URL) {
+      const fallbackResponse = await fetch(`${LOCAL_API_BASE_URL}/batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ addresses })
+      });
+      if (fallbackResponse.ok) return await fallbackResponse.json();
+    }
+    throw err;
+  }
 }
 
 function createFallbackReport(address) {

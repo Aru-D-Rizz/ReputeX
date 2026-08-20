@@ -13,19 +13,18 @@ const rawAllowedOrigins = process.env.ALLOWED_ORIGINS
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow server-to-server, curl, postman or non-browser origin requests
+    // Allow server-to-server, Vercel Serverless, curl, postman or non-browser origin requests
     if (!origin) return callback(null, true);
 
     const isExplicitlyAllowed = rawAllowedOrigins.includes(origin);
-    const isVercelPreview = /^https:\/\/.*\.vercel\.app$/.test(origin);
+    const isVercelDomain = /^https:\/\/.*\.vercel\.app$/.test(origin);
     const isChromeExtension = /^chrome-extension:\/\//.test(origin);
     const isLocalhost = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
 
-    if (isExplicitlyAllowed || isVercelPreview || isChromeExtension || isLocalhost) {
+    if (isExplicitlyAllowed || isVercelDomain || isChromeExtension || isLocalhost) {
       callback(null, true);
     } else {
-      console.warn(`[CORS Notice] Origin ${origin} permitted under permissive policy.`);
-      callback(null, true);
+      callback(null, true); // Permissive CORS policy for public Chrome Extension consumers
     }
   },
   credentials: true,
@@ -35,8 +34,12 @@ app.use(cors({
 
 app.use(express.json({ limit: '1mb' }));
 
-// Health Check Endpoint for Kubernetes & Docker probes
+// Health Check Endpoint for Vercel, Kubernetes & Docker probes
 app.get('/health', (req, res) => {
+  res.json({ status: 'ok', service: 'ReputeX XAI Engine API', timestamp: new Date().toISOString() });
+});
+
+app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'ReputeX XAI Engine API', timestamp: new Date().toISOString() });
 });
 
@@ -143,12 +146,18 @@ app.post('/api/reputation/batch', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`====================================================`);
-  console.log(` ReputeX XAI Engine API Server running on port ${PORT}`);
-  console.log(` Health check: http://localhost:${PORT}/health`);
-  console.log(` Single query: POST http://localhost:${PORT}/api/reputation/analyze`);
-  console.log(` Chat assistant: POST http://localhost:${PORT}/api/reputation/chat`);
-  console.log(` Batch query:  POST http://localhost:${PORT}/api/reputation/batch`);
-  console.log(`====================================================`);
-});
+// Run server directly when executed via Node.js
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`====================================================`);
+    console.log(` ReputeX XAI Engine API Server running on port ${PORT}`);
+    console.log(` Health check: http://localhost:${PORT}/health`);
+    console.log(` Single query: POST http://localhost:${PORT}/api/reputation/analyze`);
+    console.log(` Chat assistant: POST http://localhost:${PORT}/api/reputation/chat`);
+    console.log(` Batch query:  POST http://localhost:${PORT}/api/reputation/batch`);
+    console.log(`====================================================`);
+  });
+}
+
+// Export Express app handler for Vercel Serverless Functions
+module.exports = app;
