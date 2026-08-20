@@ -9,8 +9,9 @@ node_modules/
 .env.production.local
 backend/.env
 
-# Build outputs & OS files
+# Build outputs, Archives & OS files
 dist/
 build/
+*.zip
 .DS_Store
 Thumbs.db
