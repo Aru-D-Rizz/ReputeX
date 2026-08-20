@@ -1,11 +1,51 @@
 # ReputeX: Real-Time Web3 Blockchain Wallet Reputation & Risk Assessment
 
 [![Manifest V3](https://img.shields.io/badge/Chrome_Extension-Manifest_V3-6366f1.svg)](https://developer.chrome.com/docs/extensions/mv3/intro/)
-[![Express Backend](https://img.shields.io/badge/Backend-Node.js_Express-10b981.svg)](https://nodejs.org/)
+[![Vercel Deployment](https://img.shields.io/badge/API_Backend-Vercel_Serverless-10b981.svg)](https://repute-x-iota.vercel.app/)
 [![Nvidia Nemotron 3 Ultra](https://img.shields.io/badge/OpenRouter_AI-Nvidia_Nemotron_3_Ultra_550B-c084fc.svg)](https://openrouter.ai/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **ReputeX** is a browser extension and explainable AI (XAI) security platform that automatically scans web pages for crypto wallet addresses (Ethereum EVM, Bitcoin, Solana, and ENS domains), highlights them in real time, and evaluates their reputation, entity classification, and risk profile.
+
+---
+
+## 📥 How to Download & Install the Extension
+
+You do **not** need to install Node.js or run local servers to use the extension. The extension is pre-configured to connect directly to the live hosted Vercel API backend (`https://repute-x-iota.vercel.app/`).
+
+### Step 1: Download the Extension Code
+Choose one of the following methods to download the project:
+
+- **Method A (Direct ZIP Download)**:
+  1. Click **[Download ReputeX ZIP](https://github.com/Aru-D-Rizz/ReputeX/archive/refs/heads/main.zip)**.
+  2. Extract the downloaded `ReputeX-main.zip` file onto your computer (e.g., your Desktop or Downloads folder).
+
+- **Method B (Git Clone)**:
+  ```bash
+  git clone https://github.com/Aru-D-Rizz/ReputeX.git
+  ```
+
+---
+
+### Step 2: Load Extension into Browser (Chrome / Edge / Brave)
+
+1. Open your browser and navigate to the extensions management page:
+   - **Google Chrome**: Go to `chrome://extensions`
+   - **Microsoft Edge**: Go to `edge://extensions`
+   - **Brave Browser**: Go to `brave://extensions`
+2. Enable **Developer mode** using the toggle switch in the **top-right corner**.
+3. Click the **Load unpacked** button in the **top-left corner**.
+4. Browse to your extracted `ReputeX` folder and select the **`extension`** folder (`ReputeX/extension`).
+
+> 🎉 **Done!** The ReputeX extension icon ⚡ will now appear in your browser toolbar.
+
+---
+
+### Step 3: Test & Verify the Extension
+
+1. Open the live interactive demo page: **[https://repute-x-iota.vercel.app/demo/demo.html](https://repute-x-iota.vercel.app/demo/demo.html)** (or open `demo/demo.html` locally).
+2. All Bitcoin, Ethereum, and Solana addresses on the page will automatically be highlighted with high-visibility badges.
+3. Click or hover over any address badge to view its **0–100 Reputation Score**, **Likely Wallet Type Classification**, and ask questions to the **Nemotron AI Chat Assistant**!
 
 ---
 
@@ -16,7 +56,7 @@
   - Non-destructive, read-only webpage DOM parsing complying with strict site Content Security Policies (CSP).
 
 - **🧠 OpenRouter Nvidia Nemotron 3 Ultra XAI Risk Engine**:
-  - Powered by **OpenRouter API** (`https://openrouter.ai/api/v1/chat/completions`) using **`nvidia/nemotron-3-ultra-550b-a55b:free`**.
+  - Powered by **OpenRouter API** using **`nvidia/nemotron-3-ultra-550b-a55b:free`**.
   - Combines deterministic threat intelligence databases, live on-chain metrics, 1-hop & 2-hop graph proximity scores, and 550B parameter AI synthesis.
   - Scores wallets on a 0–100 reputation scale with clear risk categories:
     - **`LOW RISK`** (80–100)
@@ -46,6 +86,8 @@
 
 ```text
 ReputeX/
+├── index.html                         # Official Vercel landing page
+├── vercel.json                        # Vercel Serverless Function & CORS routing configuration
 ├── backend/
 │   ├── data/
 │   │   └── scamDatabase.json          # Offline scam & verified entity registry
@@ -53,8 +95,7 @@ ReputeX/
 │   │   └── xaiEngine.js               # OpenRouter Nvidia Nemotron 3 Ultra XAI engine & Q&A assistant
 │   ├── services/
 │   │   └── dataAggregator.js          # Live Etherscan V2 & Blockstream Esplora data fetcher
-│   ├── server.js                      # Express API Server (Port 5000)
-│   └── .env                           # OpenRouter & Etherscan API credentials
+│   └── server.js                      # Express API Server
 ├── extension/
 │   ├── background/
 │   │   └── service_worker.js          # MV3 service worker, checksum validation & API router
@@ -73,34 +114,25 @@ ReputeX/
 
 ---
 
-## ⚙️ Installation & Setup Guide
+## ⚙️ Optional Local Backend Setup (For Developers)
 
-### 1. Prerequisites
-- **Node.js**: v18.0.0 or higher
-- **Browser**: Google Chrome, Microsoft Edge, or any Chromium-based browser supporting Manifest V3.
+If you wish to run the API backend locally on your own machine instead of using the hosted Vercel API:
 
-### 2. Start the Backend API Server
 ```bash
+# 1. Navigate to backend folder & install dependencies
 cd backend
 npm install
+
+# 2. Configure .env credentials (or copy from .env.example)
+cp .env.example .env
+
+# 3. Start local API server on Port 5000
 node server.js
 ```
-The server will start running on `http://localhost:5000`:
+The local server starts running on `http://localhost:5000`:
 - **Health Check**: `GET http://localhost:5000/health`
 - **Single Wallet Analysis**: `POST http://localhost:5000/api/reputation/analyze`
 - **Natural Language Q&A Chat**: `POST http://localhost:5000/api/reputation/chat`
-- **Batch Scanning**: `POST http://localhost:5000/api/reputation/batch`
-
-### 3. Load Extension in Browser
-1. Open Chrome or Edge and navigate to `chrome://extensions` (or `edge://extensions`).
-2. Enable **Developer mode** (toggle in upper right).
-3. Click **Load unpacked**.
-4. Select the `extension` folder inside the `ReputeX` directory (`ReputeX/extension`).
-
-### 4. Test the Extension
-1. Open [demo/demo.html](file:///c:/Users/Aldrid/Desktop/ReputeX/demo/demo.html) in your browser.
-2. All Bitcoin and Ethereum addresses will be automatically highlighted.
-3. Hover over any address badge or open the extension toolbar icon to view the XAI Reputation Score, entity classification breakdown, and interact with the OpenRouter Nemotron AI Chat assistant!
 
 ---
 
