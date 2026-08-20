@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy - ReputeX Web3 Security</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(15, 23, 42, 0.8);
+      --card-border: rgba(99, 102, 241, 0.3);
+      --accent-glow: #818cf8;
+      --text: #f8fafc;
+      --text-dim: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 3rem 1.5rem;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 2.5rem;
+      backdrop-filter: blur(12px);
+    }
+
+    .logo {
+      font-weight: 800;
+      font-size: 1.5rem;
+      background: linear-gradient(135deg, #818cf8, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-decoration: none;
+      display: inline-block;
+      margin-bottom: 1.5rem;
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+    }
+
+    .effective-date {
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+    }
+
+    h2 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-top: 1.75rem;
+      margin-bottom: 0.75rem;
+      color: var(--accent-glow);
+    }
+
+    p, ul {
+      color: #e2e8f0;
+      font-size: 0.98rem;
+      margin-bottom: 1rem;
+    }
+
+    ul {
+      padding-left: 1.5rem;
+    }
+
+    li {
+      margin-bottom: 0.5rem;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      color: var(--text-dim);
+      font-size: 0.88rem;
+    }
+
+    footer a {
+      color: var(--accent-glow);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="/" class="logo">⚡ ReputeX Privacy Policy</a>
+    <h1>Privacy Policy for ReputeX</h1>
+    <div class="effective-date">Effective Date: August 20, 2026</div>
+
+    <p><strong>ReputeX</strong> ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how information is handled when you use the ReputeX browser extension and Web3 security services.</p>
+
+    <h2>1. Information We Do NOT Collect</h2>
+    <p>ReputeX is designed with strict privacy-by-default standards:</p>
+    <ul>
+      <li><strong>No Personal Data Collection:</strong> We do not collect names, email addresses, IP addresses, phone numbers, or passwords.</li>
+      <li><strong>No Private Keys or Credentials:</strong> ReputeX never requests, accesses, or stores private keys, seed phrases, or wallet credentials.</li>
+      <li><strong>No Browsing History Tracking:</strong> We do not track, log, or sell your web browsing history across websites.</li>
+    </ul>
+
+    <h2>2. Data We Process</h2>
+    <p>To provide real-time explainable Web3 risk scoring, ReputeX processes public on-chain information:</p>
+    <ul>
+      <li><strong>Public Wallet Addresses:</strong> When address scanning is active, public blockchain addresses (EVM, Bitcoin, Solana, ENS) visible on web pages are read locally to perform reputation analysis.</li>
+      <li><strong>Local Browser Storage:</strong> We use local browser storage (<code>chrome.storage.local</code>) solely to save user preferences (such as enabling or disabling auto-scan) and temporarily cache reputation reports on your device to optimize performance.</li>
+    </ul>
+
+    <h2>3. Third-Party Web3 APIs & AI Services</h2>
+    <p>To compute wallet scores and generate AI assessments, ReputeX communicates with encrypted external API endpoints:</p>
+    <ul>
+      <li><strong>Blockchain Explorers (Etherscan, Blockstream Esplora):</strong> Queries public on-chain transaction metrics and balances.</li>
+      <li><strong>OpenRouter AI / Nvidia Nemotron:</strong> Synthesizes full context payloads into natural language security responses for Q&A queries.</li>
+    </ul>
+    <p>All network communication occurs over secure <code>HTTPS</code> protocols.</p>
+
+    <h2>4. Data Security</h2>
+    <p>ReputeX adheres strictly to Manifest V3 security standards, using read-only DOM node traversal and isolated extension page permissions without string-based script injection.</p>
+
+    <h2>5. Contact & Support</h2>
+    <p>If you have any questions about this Privacy Policy, please contact us via our official repository:</p>
+    <p><a href="https://github.com/Aru-D-Rizz/ReputeX" target="_blank">GitHub Repository: https://github.com/Aru-D-Rizz/ReputeX</a></p>
+  </div>
+
+  <footer>
+    <p>&copy; 2026 ReputeX Open-Source Web3 Security Platform. All rights reserved. <a href="/">Back to Home</a></p>
+  </footer>
+</body>
+</html>
