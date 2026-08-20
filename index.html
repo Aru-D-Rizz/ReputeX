@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ReputeX - Web3 Blockchain Wallet Reputation & Risk Assessment Engine</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #090d16;
+      --card-bg: rgba(15, 23, 42, 0.75);
+      --card-border: rgba(99, 102, 241, 0.25);
+      --accent: #6366f1;
+      --accent-glow: #818cf8;
+      --accent-purple: #a855f7;
+      --text: #f8fafc;
+      --text-dim: #94a3b8;
+      --success: #34d399;
+      --warning: #facc15;
+      --danger: #f87171;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      background-image: 
+        radial-gradient(circle at 15% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 85% 75%, rgba(168, 85, 247, 0.15) 0%, transparent 40%);
+      background-attachment: fixed;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(16px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(9, 13, 22, 0.85);
+    }
+
+    .nav-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 800;
+      font-size: 1.35rem;
+      background: linear-gradient(135deg, #818cf8, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-decoration: none;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(52, 211, 153, 0.1);
+      border: 1px solid rgba(52, 211, 153, 0.3);
+      color: var(--success);
+      padding: 0.35rem 0.85rem;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background-color: var(--success);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--success);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+    }
+
+    main {
+      flex: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 4rem 2rem;
+      width: 100%;
+    }
+
+    .hero {
+      text-align: center;
+      max-width: 850px;
+      margin: 0 auto 5rem auto;
+    }
+
+    .hero-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(99, 102, 241, 0.12);
+      border: 1px solid rgba(129, 140, 248, 0.3);
+      color: var(--accent-glow);
+      padding: 0.4rem 1.1rem;
+      border-radius: 999px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+    }
+
+    .hero h1 {
+      font-size: 3.2rem;
+      font-weight: 800;
+      line-height: 1.15;
+      margin-bottom: 1.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    .hero h1 span {
+      background: linear-gradient(135deg, #818cf8 0%, #c084fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+      font-size: 1.2rem;
+      color: var(--text-dim);
+      margin-bottom: 2.5rem;
+    }
+
+    .cta-group {
+      display: flex;
+      gap: 1.2rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.85rem 1.8rem;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 1rem;
+      text-decoration: none;
+      transition: all 0.25s ease;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #6366f1, #9333ea);
+      color: white;
+      box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 28px rgba(99, 102, 241, 0.6);
+    }
+
+    .btn-secondary {
+      background: rgba(30, 41, 59, 0.8);
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(51, 65, 85, 0.8);
+      border-color: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.75rem;
+      margin-bottom: 5rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 18px;
+      padding: 2rem;
+      backdrop-filter: blur(12px);
+      transition: transform 0.25s ease, border-color 0.25s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: var(--accent-glow);
+    }
+
+    .card-icon {
+      font-size: 2.2rem;
+      margin-bottom: 1rem;
+      display: inline-block;
+    }
+
+    .card h3 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      color: #f1f5f9;
+    }
+
+    .card p {
+      color: var(--text-dim);
+      font-size: 0.95rem;
+    }
+
+    .section-title {
+      text-align: center;
+      font-size: 2.2rem;
+      font-weight: 800;
+      margin-bottom: 3rem;
+    }
+
+    .section-title span {
+      background: linear-gradient(135deg, #818cf8, #c084fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .code-box {
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px;
+      padding: 1.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      color: #e2e8f0;
+      overflow-x: auto;
+      margin-top: 1rem;
+    }
+
+    .code-box pre {
+      white-space: pre-wrap;
+    }
+
+    .code-lbl {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--accent-glow);
+      margin-bottom: 0.5rem;
+    }
+
+    footer {
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 2.5rem 2rem;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      background: rgba(9, 13, 22, 0.95);
+    }
+
+    footer a {
+      color: var(--accent-glow);
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="nav-container">
+      <a href="/" class="logo">
+        ⚡ ReputeX
+      </a>
+      <div class="status-badge">
+        <span class="status-dot"></span>
+        Vercel Serverless API Online
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-pill">
+        🤖 Powered by Nvidia Nemotron-3 Ultra 550B & OpenRouter AI
+      </div>
+      <h1>
+        Real-Time Web3 Blockchain <span>Wallet Reputation & Risk Assessment</span>
+      </h1>
+      <p>
+        ReputeX automatically scans web pages for crypto wallet addresses (Ethereum EVM, Bitcoin, Solana & ENS), calculates 0–100 explainable trust scores, predicts entity classifications, and provides a live conversational AI security assistant.
+      </p>
+      <div class="cta-group">
+        <a href="https://github.com/Aru-D-Rizz/ReputeX" target="_blank" class="btn btn-primary">
+          📥 Download Extension Code (GitHub)
+        </a>
+        <a href="/demo/demo.html" class="btn btn-secondary">
+          🧪 Open Interactive Web Demo
+        </a>
+      </div>
+    </section>
+
+    <h2 class="section-title">Why Use <span>ReputeX?</span></h2>
+
+    <div class="grid">
+      <div class="card">
+        <div class="card-icon">🛡️</div>
+        <h3>0–100 Explainable Risk Scoring</h3>
+        <p>Evaluates wallet age, transaction volume, counterparty graph risk, scam database reports, and protocol safety to assign clear LOW, MEDIUM, HIGH, or CRITICAL risk ratings.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">🔍</div>
+        <h3>Multi-Chain Read-Only Scanner</h3>
+        <p>Seamlessly scans web pages for Ethereum (EVM), Bitcoin (Bech32/Legacy), Solana (Base58), and ENS domain names without modifying page DOM or violating site CSP rules.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">🏷️</div>
+        <h3>Entity Classification Predictions</h3>
+        <p>Predicts likely entity types with probability breakdowns: Exchange, Personal Wallet, Whale, Merchant, Bot, Mixer, or Possible Scam Wallet.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">💬</div>
+        <h3>Nemotron AI Chat Assistant</h3>
+        <p>Ask natural questions like <em>"Is this wallet safe?"</em> or <em>"Why should I trust this address?"</em> inside the extension popup or floating hover overlay for human-like AI responses.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">⚡</div>
+        <h3>Public Vercel Serverless Backend</h3>
+        <p>Anyone who downloads the extension can query your hosted Vercel API backend instantly without running local Node.js servers.</p>
+      </div>
+
+      <div class="card">
+        <div class="card-icon">🔒</div>
+        <h3>Manifest V3 & CSP Compliant</h3>
+        <p>Strictly uses read-only DOM text node traversal and encrypted HTTPS endpoints to ensure zero XSS risks and complete user security.</p>
+      </div>
+    </div>
+
+    <h2 class="section-title">Quick <span>API Reference</span></h2>
+
+    <div class="card" style="margin-bottom: 2rem;">
+      <div class="code-lbl">Health Check</div>
+      <div class="code-box">GET https://repute-x-iota.vercel.app/health</div>
+    </div>
+
+    <div class="card" style="margin-bottom: 2rem;">
+      <div class="code-lbl">Single Wallet Analysis API</div>
+      <div class="code-box">
+<pre>POST https://repute-x-iota.vercel.app/api/reputation/analyze
+Header: Content-Type: application/json
+Body: { "address": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045" }</pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="code-lbl">Nemotron AI Chat Assistant API</div>
+      <div class="code-box">
+<pre>POST https://repute-x-iota.vercel.app/api/reputation/chat
+Header: Content-Type: application/json
+Body: { "address": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", "question": "Is this wallet safe?" }</pre>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <p>ReputeX Open-Source Web3 Security Platform &copy; 2026. Built with Node.js, Express, OpenRouter & Vercel Serverless Functions.</p>
+    <p style="margin-top: 0.5rem;"><a href="https://github.com/Aru-D-Rizz/ReputeX" target="_blank">View GitHub Repository</a> | <a href="/demo/demo.html">Interactive Web3 Test Suite</a></p>
+  </footer>
+</body>
+</html>
