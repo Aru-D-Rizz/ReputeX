@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 5000;
 // Dynamic CORS configuration allowing Vercel production, preview deployments, local dev & extension hosts
 const rawAllowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-  : ['https://reputex.vercel.app', 'http://localhost:3000', 'http://localhost:5000', 'http://127.0.0.1:5000'];
+  : ['https://reputex.vercel.app', 'https://repute-x-iota.vercel.app', 'http://localhost:3000', 'http://localhost:5000', 'http://127.0.0.1:5000'];
 
 app.use(cors({
   origin: (origin, callback) => {
@@ -24,7 +24,7 @@ app.use(cors({
     if (isExplicitlyAllowed || isVercelDomain || isChromeExtension || isLocalhost) {
       callback(null, true);
     } else {
-      callback(null, true); // Permissive CORS policy for public Chrome Extension consumers
+      callback(null, true); // Permissive CORS policy for public Chrome & Edge Extension consumers
     }
   },
   credentials: true,
@@ -35,16 +35,12 @@ app.use(cors({
 app.use(express.json({ limit: '1mb' }));
 
 // Health Check Endpoint for Vercel, Kubernetes & Docker probes
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', service: 'ReputeX XAI Engine API', timestamp: new Date().toISOString() });
-});
-
-app.get('/api/health', (req, res) => {
+app.get(['/health', '/api/health'], (req, res) => {
   res.json({ status: 'ok', service: 'ReputeX XAI Engine API', timestamp: new Date().toISOString() });
 });
 
 // API Root Index Info Route (Prevents 404 when visiting /api/reputation in browser)
-app.all(['/api/reputation', '/api/reputation/'], (req, res) => {
+app.all(['/api/reputation', '/api/reputation/', '/'], (req, res) => {
   res.json({
     status: 'ok',
     service: 'ReputeX XAI Engine API',
@@ -61,10 +57,9 @@ app.all(['/api/reputation', '/api/reputation/'], (req, res) => {
 
 /**
  * Single Wallet / ENS Domain Analysis Endpoint
- * POST /api/reputation/analyze
- * Body: { address: "0x..." }
+ * Handles /api/reputation/analyze, /reputation/analyze, and /analyze
  */
-app.post('/api/reputation/analyze', async (req, res) => {
+app.post(['/api/reputation/analyze', '/reputation/analyze', '/analyze'], async (req, res) => {
   try {
     const { address } = req.body;
 
@@ -95,10 +90,9 @@ app.post('/api/reputation/analyze', async (req, res) => {
 
 /**
  * Natural Language Wallet Q&A Chat Endpoint with Full Context Payload
- * POST /api/reputation/chat
- * Body: { address: "0x...", question: "Is this wallet safe?", context?: { ... } }
+ * Handles /api/reputation/chat, /reputation/chat, and /chat
  */
-app.post('/api/reputation/chat', async (req, res) => {
+app.post(['/api/reputation/chat', '/reputation/chat', '/chat'], async (req, res) => {
   try {
     const { address, question, context } = req.body;
 
@@ -129,11 +123,10 @@ app.post('/api/reputation/chat', async (req, res) => {
 });
 
 /**
- * Batch Wallet Analysis Endpoint (For Extension Webpage Content Script)
- * POST /api/reputation/batch
- * Body: { addresses: ["0x...", "1A1zP1..."] }
+ * Batch Wallet Analysis Endpoint
+ * Handles /api/reputation/batch, /reputation/batch, and /batch
  */
-app.post('/api/reputation/batch', async (req, res) => {
+app.post(['/api/reputation/batch', '/reputation/batch', '/batch'], async (req, res) => {
   try {
     const { addresses } = req.body;
 

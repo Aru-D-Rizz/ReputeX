@@ -41,7 +41,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     fetchWalletChat(address, question, context)
       .then((data) => sendResponse({ success: true, data }))
       .catch((err) => {
-        console.warn('[ReputeX Chat Local Fallback]:', err);
+        console.warn('[ReputeX Chat Fallback]:', err);
         const score = (context && context.score) || 80;
         const cat = (context && context.riskCategory) || 'LOW';
         const age = (context && context.metrics && context.metrics.walletAgeDays) || 365;
@@ -66,8 +66,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     fetchReputationSingle(address)
       .then((data) => {
-        cache.set(address.toLowerCase(), data);
-        sendResponse({ success: true, data });
+        if (data && data.score !== undefined) {
+          cache.set(address.toLowerCase(), data);
+          sendResponse({ success: true, data });
+        } else {
+          throw new Error('Invalid report payload format');
+        }
       })
       .catch((err) => {
         console.warn('[ReputeX Background] Backend connection notice:', err);
@@ -163,14 +167,27 @@ async function fetchWalletChat(address, question, context) {
       body: JSON.stringify({ address, question, context })
     });
     if (response.ok) return await response.json();
+    throw new Error(`HTTP ${response.status}`);
   } catch (err) {
+    if (primaryUrl !== VERCEL_API_BASE_URL) {
+      try {
+        const vRes = await fetch(`${VERCEL_API_BASE_URL}/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address, question, context })
+        });
+        if (vRes.ok) return await vRes.json();
+      } catch (e1) {}
+    }
     if (primaryUrl !== LOCAL_API_BASE_URL) {
-      const fallbackResponse = await fetch(`${LOCAL_API_BASE_URL}/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address, question, context })
-      });
-      if (fallbackResponse.ok) return await fallbackResponse.json();
+      try {
+        const lRes = await fetch(`${LOCAL_API_BASE_URL}/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address, question, context })
+        });
+        if (lRes.ok) return await lRes.json();
+      } catch (e2) {}
     }
     throw err;
   }
@@ -185,14 +202,27 @@ async function fetchReputationSingle(address) {
       body: JSON.stringify({ address })
     });
     if (response.ok) return await response.json();
+    throw new Error(`HTTP ${response.status}`);
   } catch (err) {
+    if (primaryUrl !== VERCEL_API_BASE_URL) {
+      try {
+        const vRes = await fetch(`${VERCEL_API_BASE_URL}/analyze`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address })
+        });
+        if (vRes.ok) return await vRes.json();
+      } catch (e1) {}
+    }
     if (primaryUrl !== LOCAL_API_BASE_URL) {
-      const fallbackResponse = await fetch(`${LOCAL_API_BASE_URL}/analyze`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address })
-      });
-      if (fallbackResponse.ok) return await fallbackResponse.json();
+      try {
+        const lRes = await fetch(`${LOCAL_API_BASE_URL}/analyze`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address })
+        });
+        if (lRes.ok) return await lRes.json();
+      } catch (e2) {}
     }
     throw err;
   }
@@ -207,14 +237,27 @@ async function fetchReputationBatch(addresses) {
       body: JSON.stringify({ addresses })
     });
     if (response.ok) return await response.json();
+    throw new Error(`HTTP ${response.status}`);
   } catch (err) {
+    if (primaryUrl !== VERCEL_API_BASE_URL) {
+      try {
+        const vRes = await fetch(`${VERCEL_API_BASE_URL}/batch`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ addresses })
+        });
+        if (vRes.ok) return await vRes.json();
+      } catch (e1) {}
+    }
     if (primaryUrl !== LOCAL_API_BASE_URL) {
-      const fallbackResponse = await fetch(`${LOCAL_API_BASE_URL}/batch`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ addresses })
-      });
-      if (fallbackResponse.ok) return await fallbackResponse.json();
+      try {
+        const lRes = await fetch(`${LOCAL_API_BASE_URL}/batch`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ addresses })
+        });
+        if (lRes.ok) return await lRes.json();
+      } catch (e2) {}
     }
     throw err;
   }
