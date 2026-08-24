@@ -10,11 +10,19 @@
     {
       "source": "/api/(.*)",
       "destination": "/api/index.js"
+    },
+    {
+      "source": "/demo/demo",
+      "destination": "/demo/demo.html"
+    },
+    {
+      "source": "/demo",
+      "destination": "/demo/demo.html"
     }
   ],
   "headers": [
     {
-      "source": "/api/(.*)",
+      "source": "/(.*)",
       "headers": [
         { "key": "Access-Control-Allow-Credentials", "value": "true" },
         { "key": "Access-Control-Allow-Origin", "value": "*" },
