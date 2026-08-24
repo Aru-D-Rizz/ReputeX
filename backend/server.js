@@ -43,6 +43,22 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'ReputeX XAI Engine API', timestamp: new Date().toISOString() });
 });
 
+// API Root Index Info Route (Prevents 404 when visiting /api/reputation in browser)
+app.all(['/api/reputation', '/api/reputation/'], (req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'ReputeX XAI Engine API',
+    message: 'ReputeX API backend is online and operational.',
+    endpoints: {
+      analyze: 'POST /api/reputation/analyze',
+      chat: 'POST /api/reputation/chat',
+      batch: 'POST /api/reputation/batch',
+      health: 'GET /health'
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
 /**
  * Single Wallet / ENS Domain Analysis Endpoint
  * POST /api/reputation/analyze
