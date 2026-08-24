@@ -3,7 +3,7 @@
  * Enforces HTTPS API calls, format checksum validation, and resilient AI Chat routing.
  * Automatically connects to production Vercel Serverless API with local dev fallback.
  */
-const VERCEL_API_BASE_URL = 'https://reputex.vercel.app/api/reputation';
+const VERCEL_API_BASE_URL = 'https://repute-x-iota.vercel.app/api/reputation';
 const LOCAL_API_BASE_URL = 'http://127.0.0.1:5000/api/reputation';
 const cache = new Map();
 
