@@ -6,22 +6,22 @@ const { calculateReputation, answerWalletQuestion } = require('./engine/xaiEngin
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Dynamic CORS configuration allowing Vercel production, preview deployments, local dev & extension hosts
+// Dynamic CORS configuration allowing Vercel production, preview deployments, local dev & browser extensions
 const rawAllowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
   : ['https://reputex.vercel.app', 'https://repute-x-iota.vercel.app', 'http://localhost:3000', 'http://localhost:5000', 'http://127.0.0.1:5000'];
 
-app.use(cors({
+const corsOptions = {
   origin: (origin, callback) => {
     // Allow server-to-server, Vercel Serverless, curl, postman or non-browser origin requests
     if (!origin) return callback(null, true);
 
     const isExplicitlyAllowed = rawAllowedOrigins.includes(origin);
     const isVercelDomain = /^https:\/\/.*\.vercel\.app$/.test(origin);
-    const isChromeExtension = /^chrome-extension:\/\//.test(origin);
+    const isBrowserExtension = /^chrome-extension:\/\//.test(origin) || /^ms-browser-extension:\/\//.test(origin) || /^moz-extension:\/\//.test(origin);
     const isLocalhost = /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin);
 
-    if (isExplicitlyAllowed || isVercelDomain || isChromeExtension || isLocalhost) {
+    if (isExplicitlyAllowed || isVercelDomain || isBrowserExtension || isLocalhost) {
       callback(null, true);
     } else {
       callback(null, true); // Permissive CORS policy for public Chrome & Edge Extension consumers
@@ -30,7 +30,10 @@ app.use(cors({
   credentials: true,
   methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept']
-}));
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 app.use(express.json({ limit: '1mb' }));
 
