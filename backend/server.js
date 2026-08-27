@@ -6,6 +6,33 @@ const { calculateReputation, answerWalletQuestion } = require('./engine/xaiEngin
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Server-Side In-Memory Cache (10-Minute TTL for Sub-50ms Repeat Lookups)
+const analyzeCache = new Map();
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
+function getCachedReport(address) {
+  const key = address.toLowerCase();
+  const entry = analyzeCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
+    analyzeCache.delete(key);
+    return null;
+  }
+  return entry.report;
+}
+
+function setCachedReport(address, report) {
+  const key = address.toLowerCase();
+  analyzeCache.set(key, {
+    timestamp: Date.now(),
+    report: report
+  });
+  if (analyzeCache.size > 1000) {
+    const oldestKey = analyzeCache.keys().next().value;
+    analyzeCache.delete(oldestKey);
+  }
+}
+
 // Dynamic CORS configuration allowing Vercel production, preview deployments, local dev & browser extensions
 const rawAllowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
@@ -13,7 +40,6 @@ const rawAllowedOrigins = process.env.ALLOWED_ORIGINS
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow server-to-server, Vercel Serverless, curl, postman or non-browser origin requests
     if (!origin) return callback(null, true);
 
     const isExplicitlyAllowed = rawAllowedOrigins.includes(origin);
@@ -24,7 +50,7 @@ const corsOptions = {
     if (isExplicitlyAllowed || isVercelDomain || isBrowserExtension || isLocalhost) {
       callback(null, true);
     } else {
-      callback(null, true); // Permissive CORS policy for public Chrome & Edge Extension consumers
+      callback(null, true);
     }
   },
   credentials: true,
@@ -42,7 +68,7 @@ app.get(['/health', '/api/health'], (req, res) => {
   res.json({ status: 'ok', service: 'ReputeX XAI Engine API', timestamp: new Date().toISOString() });
 });
 
-// API Root Index Info Route (Prevents 404 when visiting /api/reputation in browser)
+// API Root Index Info Route
 app.all(['/api/reputation', '/api/reputation/', '/'], (req, res) => {
   res.json({
     status: 'ok',
@@ -81,9 +107,16 @@ app.post(['/api/reputation/analyze', '/reputation/analyze', '/analyze'], async (
       return res.status(400).json({ error: 'Invalid wallet address or ENS domain format.' });
     }
 
+    // Return Server Cached Report if Available (< 50ms Response)
+    const cachedReport = getCachedReport(cleanInput);
+    if (cachedReport) {
+      return res.json({ ...cachedReport, cached: true });
+    }
+
     const metrics = await fetchWalletMetrics(cleanInput);
     const report = await calculateReputation(metrics);
 
+    setCachedReport(cleanInput, report);
     return res.json(report);
   } catch (err) {
     console.error('Error analyzing wallet address:', err);
@@ -105,8 +138,14 @@ app.post(['/api/reputation/chat', '/reputation/chat', '/chat'], async (req, res)
 
     let reportContext = context;
     if (!reportContext || !reportContext.metrics) {
-      const metrics = await fetchWalletMetrics(address.trim());
-      reportContext = await calculateReputation(metrics);
+      const cached = getCachedReport(address.trim());
+      if (cached) {
+        reportContext = cached;
+      } else {
+        const metrics = await fetchWalletMetrics(address.trim());
+        reportContext = await calculateReputation(metrics);
+        setCachedReport(address.trim(), reportContext);
+      }
     }
 
     const aiAnswer = await answerWalletQuestion(address.trim(), question.trim(), reportContext);
@@ -143,8 +182,16 @@ app.post(['/api/reputation/batch', '/reputation/batch', '/batch'], async (req, r
     for (const addr of uniqueAddresses) {
       if (typeof addr === 'string' && addr.trim().length > 0) {
         try {
-          const metrics = await fetchWalletMetrics(addr.trim());
-          results[addr] = await calculateReputation(metrics);
+          const clean = addr.trim();
+          const cached = getCachedReport(clean);
+          if (cached) {
+            results[clean] = cached;
+          } else {
+            const metrics = await fetchWalletMetrics(clean);
+            const report = await calculateReputation(metrics);
+            setCachedReport(clean, report);
+            results[clean] = report;
+          }
         } catch (singleErr) {
           console.error(`Failed to analyze ${addr}:`, singleErr);
         }

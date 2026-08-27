@@ -4,13 +4,13 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
 const OPENROUTER_API_URL = process.env.OPENROUTER_API_URL || 'https://openrouter.ai/api/v1/chat/completions';
 
-// 100% Active & Verified Free OpenRouter Models
+// Low-Latency High-Performance OpenRouter Models
 const OPENROUTER_MODELS = [
-  process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3-ultra-550b-a55b:free',
-  'nvidia/nemotron-3.5-lightning:free',
-  'nvidia/nemotron-3-super-120b-a12b:free',
-  'google/gemma-4-31b-it:free',
-  'google/gemma-4-26b-a4b-it:free'
+  process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3.5-lightning:free',
+  'google/gemma-2-9b-it:free',
+  'qwen/qwen-2.5-72b-instruct:free',
+  'meta-llama/llama-3.3-70b-instruct:free',
+  'nvidia/nemotron-3-ultra-550b-a55b:free'
 ];
 
 /**
@@ -87,13 +87,13 @@ function classifyWalletType(metrics) {
 }
 
 /**
- * Resilient OpenRouter API Dispatcher with Verified Active Model Fallback
+ * Resilient OpenRouter API Dispatcher with Fast 3.0s Timeout per Model Candidate
  */
-async function queryOpenRouterAI(messages, temperature = 0.3, maxTokens = 350) {
+async function queryOpenRouterAI(messages, temperature = 0.3, maxTokens = 180) {
   for (const modelCandidate of OPENROUTER_MODELS) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s per attempt
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // Strict 3s per candidate
 
       const response = await fetch(OPENROUTER_API_URL, {
         method: 'POST',
@@ -142,7 +142,7 @@ async function queryOpenRouterAI(messages, temperature = 0.3, maxTokens = 350) {
 }
 
 /**
- * Call Nvidia Nemotron 3 Ultra via OpenRouter API for deep XAI synthesis
+ * Call OpenRouter API for deep XAI synthesis with strict 2.5s race timeout
  */
 async function generateNemotronAISynthesis(address, score, riskCategory, metrics, classification) {
   try {
@@ -163,10 +163,14 @@ Protocol Interactions: ${metrics.protocolInteractions ? metrics.protocolInteract
 
 Return ONLY a JSON object with 2 keys: "summary" and "recommendation".`;
 
-    const result = await queryOpenRouterAI([
+    // 2.5-second race timeout cap to ensure /analyze initial response returns in < 2.5s
+    const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 2500));
+    const aiPromise = queryOpenRouterAI([
       { role: 'system', content: 'You are an AI specialized in blockchain transaction safety and explainable Web3 risk scoring. Output valid JSON.' },
       { role: 'user', content: prompt }
-    ], 0.2, 300);
+    ], 0.2, 180);
+
+    const result = await Promise.race([aiPromise, timeoutPromise]);
 
     if (!result) return null;
 
@@ -197,7 +201,6 @@ Return ONLY a JSON object with 2 keys: "summary" and "recommendation".`;
 
 /**
  * Natural Language Wallet Q&A Conversational Chatbot Assistant
- * Responds like an authentic, intelligent human Web3 security analyst using full on-chain context payloads.
  */
 async function answerWalletQuestion(address, question, reportContext) {
   const metrics = reportContext.metrics || {};
@@ -248,7 +251,7 @@ System Guidelines:
   const result = await queryOpenRouterAI([
     { role: 'system', content: 'You are ReputeX AI, a conversational, human-like Web3 security consultant. Provide authentic, engaging, natural language security answers.' },
     { role: 'user', content: fullContextPrompt }
-  ], 0.4, 400);
+  ], 0.4, 300);
 
   if (result && result.text && result.text.length > 5) {
     return result.text;

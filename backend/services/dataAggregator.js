@@ -46,6 +46,18 @@ const KNOWN_CONTRACT_PROTOCOLS = {
 };
 
 /**
+ * Strict 2.5s Timeout Fetch Utility for External API calls
+ */
+const fetchWithTimeout = (url, timeoutMs = 2500) => {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { signal: controller.signal })
+    .then(r => r.json())
+    .finally(() => clearTimeout(id))
+    .catch(() => null);
+};
+
+/**
  * Fetch live EVM metrics with expanded behavioral & transaction analytics
  */
 async function fetchEtherscanLiveMetrics(address, ensDomain = null) {
@@ -56,8 +68,8 @@ async function fetchEtherscanLiveMetrics(address, ensDomain = null) {
     const txUrl = `https://api.etherscan.io/v2/api?chainid=1&module=account&action=txlist&address=${cleanAddr}&startblock=0&endblock=99999999&page=1&offset=100&sort=asc&apikey=${ETHERSCAN_API_KEY}`;
 
     const [balRes, txRes] = await Promise.all([
-      fetch(balanceUrl).then(r => r.json()).catch(() => null),
-      fetch(txUrl).then(r => r.json()).catch(() => null)
+      fetchWithTimeout(balanceUrl, 2500),
+      fetchWithTimeout(txUrl, 2500)
     ]);
 
     if (!txRes || txRes.status !== '1' || !Array.isArray(txRes.result)) {
@@ -157,8 +169,8 @@ async function fetchBlockstreamBtcMetrics(address) {
     const txsUrl = `https://blockstream.info/api/address/${cleanAddr}/txs`;
 
     const [addrRes, txsRes] = await Promise.all([
-      fetch(addressUrl).then(r => r.json()).catch(() => null),
-      fetch(txsUrl).then(r => r.json()).catch(() => null)
+      fetchWithTimeout(addressUrl, 2500),
+      fetchWithTimeout(txsUrl, 2500)
     ]);
 
     if (!addrRes || !addrRes.chain_stats) return null;
