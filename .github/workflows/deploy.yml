@@ -61,7 +61,7 @@ jobs:
     name: Deploy to Kubernetes Cluster
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && secrets.KUBE_CONFIG != ''
 
     steps:
       - name: Checkout Source Code
