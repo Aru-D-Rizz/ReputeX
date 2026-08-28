@@ -1,7 +1,7 @@
 /**
  * ReputeX Background Service Worker - Manifest V3 Compliant
- * Enforces HTTPS API calls, format checksum validation, and resilient AI Chat routing.
- * Automatically connects to production Vercel Serverless API with local dev fallback.
+ * Enforces HTTPS API calls, multi-chain format validation, and resilient AI Chat routing.
+ * Connects to production Vercel Serverless API with local dev fallback.
  */
 const VERCEL_API_BASE_URL = 'https://repute-x-iota.vercel.app/api/reputation';
 const LOCAL_API_BASE_URL = 'http://127.0.0.1:5000/api/reputation';
@@ -126,19 +126,38 @@ function validateAddressFormat(address) {
   if (!address || typeof address !== 'string') return false;
   const clean = address.trim();
 
+  // EVM & BNB Chain (0x...)
   if (clean.startsWith('0x')) {
     return /^0x[a-fA-F0-9]{40}$/.test(clean);
   }
 
+  // Bitcoin (Legacy, P2SH, Bech32)
   if (/^(bc1[a-zA-Z0-9]{8,87}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/.test(clean)) {
     return true;
   }
 
+  // Cardano Bech32 (addr1...)
+  if (/^(addr1[a-z0-9]{50,100}|addr_test1[a-z0-9]{50,100})$/i.test(clean)) {
+    return true;
+  }
+
+  // XRP Ledger (r...)
+  if (/^r[0-9a-zA-Z]{24,34}$/.test(clean)) {
+    return true;
+  }
+
+  // Polkadot SS58 (1... or 5...)
+  if (/^[15][a-km-zA-HJ-NP-Z1-9]{46,47}$/.test(clean)) {
+    return true;
+  }
+
+  // Solana Base58
   if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(clean)) {
     if (/^[0-9a-fA-F]+$/.test(clean)) return false;
     return true;
   }
 
+  // ENS Domains
   if (/^[a-zA-Z0-9-]+\.(eth|org|io|crypto|wallet|dao)$/i.test(clean)) {
     return true;
   }
@@ -265,6 +284,16 @@ async function fetchReputationBatch(addresses) {
 
 function createFallbackReport(address) {
   const isBtc = address.startsWith('1') || address.startsWith('3') || address.startsWith('bc1');
+  const isAda = address.toLowerCase().startsWith('addr1') || address.toLowerCase().startsWith('addr_test1');
+  const isXrp = address.startsWith('r');
+  const isDot = address.length >= 47 && (address.startsWith('1') || address.startsWith('5'));
+  
+  let networkName = "Ethereum / EVM Mainnet";
+  if (isBtc) networkName = "Bitcoin Mainnet";
+  else if (isAda) networkName = "Cardano Core Mainnet";
+  else if (isXrp) networkName = "XRP Ledger Mainnet";
+  else if (isDot) networkName = "Polkadot Substrate Relay";
+
   return {
     address: address,
     score: 80,
@@ -295,7 +324,7 @@ function createFallbackReport(address) {
       twoHopRiskyConnections: 0,
       fundVelocity: "LOW",
       dormantSpikeDetected: false,
-      protocolInteractions: isBtc ? ["Bitcoin Core Mainnet"] : ["Uniswap V3", "OpenSea"],
+      protocolInteractions: [networkName],
       isContract: false,
       verifiedLabel: null
     },
@@ -305,8 +334,8 @@ function createFallbackReport(address) {
       ],
       negativeFactors: [],
       aiSynthesis: {
-        model: "nvidia/nemotron-3-ultra-550b-a55b:free",
-        provider: "OpenRouter AI (nvidia/nemotron-3-ultra-550b-a55b:free)",
+        model: "nvidia/nemotron-3.5-lightning:free",
+        provider: "OpenRouter AI (nvidia/nemotron-3.5-lightning:free)",
         summary: `Wallet age of 365 days and 45 transactions indicate a low risk profile.`,
         recommendation: "Always inspect contract allowances prior to signing."
       }

@@ -12,6 +12,9 @@
   const EVM_REGEX = /\b(0x[a-fA-F0-9]{40})\b/g;
   const BTC_REGEX = /\b(bc1[a-zA-Z0-9]{8,87}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})\b/g;
   const SOL_REGEX = /\b([1-9A-HJ-NP-Za-km-z]{32,44})\b/g;
+  const ADA_REGEX = /\b(addr1[a-z0-9]{50,100}|addr_test1[a-z0-9]{50,100})\b/gi;
+  const DOT_REGEX = /\b([15][a-km-zA-HJ-NP-Z1-9]{46,47})\b/g;
+  const XRP_REGEX = /\b(r[0-9a-zA-Z]{24,34})\b/g;
 
   init();
 
@@ -99,6 +102,21 @@
       scannedAddresses.add(match[0]);
     }
 
+    ADA_REGEX.lastIndex = 0;
+    while ((match = ADA_REGEX.exec(text)) !== null) {
+      scannedAddresses.add(match[0]);
+    }
+
+    XRP_REGEX.lastIndex = 0;
+    while ((match = XRP_REGEX.exec(text)) !== null) {
+      scannedAddresses.add(match[0]);
+    }
+
+    DOT_REGEX.lastIndex = 0;
+    while ((match = DOT_REGEX.exec(text)) !== null) {
+      if (!match[0].startsWith('0x')) scannedAddresses.add(match[0]);
+    }
+
     SOL_REGEX.lastIndex = 0;
     while ((match = SOL_REGEX.exec(text)) !== null) {
       const addr = match[0];
@@ -143,7 +161,10 @@
 
           EVM_REGEX.lastIndex = 0;
           BTC_REGEX.lastIndex = 0;
-          if (EVM_REGEX.test(node.nodeValue) || BTC_REGEX.test(node.nodeValue)) {
+          ADA_REGEX.lastIndex = 0;
+          XRP_REGEX.lastIndex = 0;
+          DOT_REGEX.lastIndex = 0;
+          if (EVM_REGEX.test(node.nodeValue) || BTC_REGEX.test(node.nodeValue) || ADA_REGEX.test(node.nodeValue) || XRP_REGEX.test(node.nodeValue) || DOT_REGEX.test(node.nodeValue)) {
             return NodeFilter.FILTER_ACCEPT;
           }
           return NodeFilter.FILTER_REJECT;
@@ -156,7 +177,7 @@
       textNodes.push(currentNode);
     }
 
-    const COMBINED_REGEX = /(0x[a-fA-F0-9]{40}|bc1[a-zA-Z0-9]{8,87}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})/g;
+    const COMBINED_REGEX = /(0x[a-fA-F0-9]{40}|bc1[a-zA-Z0-9]{8,87}|[13][a-km-zA-HJ-NP-Z1-9]{25,34}|addr1[a-z0-9]{50,100}|addr_test1[a-z0-9]{50,100}|r[0-9a-zA-Z]{24,34}|[15][a-km-zA-HJ-NP-Z1-9]{46,47})/gi;
 
     textNodes.forEach((node) => {
       const parent = node.parentElement;

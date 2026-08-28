@@ -101,9 +101,12 @@ app.post(['/api/reputation/analyze', '/reputation/analyze', '/analyze'], async (
     const evmPattern = /^0x[a-fA-F0-9]{40}$/;
     const btcPattern = /^(bc1[a-zA-Z0-9]{8,87}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/;
     const solanaPattern = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
+    const adaPattern = /^(addr1[a-z0-9]{50,100}|addr_test1[a-z0-9]{50,100})$/i;
+    const dotPattern = /^[15][a-km-zA-HJ-NP-Z1-9]{46,47}$/;
+    const xrpPattern = /^r[0-9a-zA-Z]{24,34}$/;
     const domainPattern = /^[a-zA-Z0-9-]+\.(eth|org|io|crypto|wallet|dao)$/i;
 
-    if (!evmPattern.test(cleanInput) && !btcPattern.test(cleanInput) && !solanaPattern.test(cleanInput) && !domainPattern.test(cleanInput)) {
+    if (!evmPattern.test(cleanInput) && !btcPattern.test(cleanInput) && !solanaPattern.test(cleanInput) && !adaPattern.test(cleanInput) && !dotPattern.test(cleanInput) && !xrpPattern.test(cleanInput) && !domainPattern.test(cleanInput)) {
       return res.status(400).json({ error: 'Invalid wallet address or ENS domain format.' });
     }
 
