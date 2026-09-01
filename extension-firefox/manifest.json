@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "ReputeX: Web3 Wallet Reputation & Risk Assessment",
+  "version": "1.0.3",
+  "description": "Real-time, explainable AI reputation overlay & risk assessment for EVM, Bitcoin, Solana, Cardano, Polkadot, and XRP wallet addresses.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "reputex@web3.security",
+      "strict_min_version": "109.0"
+    }
+  },
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://*/*"
+  ],
+  "background": {
+    "scripts": ["background/service_worker.js"]
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content/content.js"],
+      "css": ["content/content.css"],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "ReputeX Reputation Assessment",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  }
+}

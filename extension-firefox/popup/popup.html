@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReputeX Reputation Assessment</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    
+    <!-- Header -->
+    <div class="header">
+      <div class="brand">
+        <div class="brand-icon">⚡</div>
+        <div>
+          <div class="brand-title">ReputeX</div>
+          <div class="brand-sub">Multi-Chain XAI Reputation</div>
+        </div>
+      </div>
+      <div class="toggle-wrapper">
+        <span class="toggle-label" id="toggle-text">Active</span>
+        <label class="switch">
+          <input type="checkbox" id="reputex-toggle" checked>
+          <span class="slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Page Status Banner -->
+    <div class="status-banner">
+      <div class="status-info">
+        <div class="status-dot" id="status-dot"></div>
+        <div class="status-text" id="page-scan-status">Auto-Scanner Active</div>
+      </div>
+      <button class="rescan-btn" id="rescan-tab-btn">Rescan Page</button>
+    </div>
+
+    <!-- Detected Page Wallets Section -->
+    <div class="page-wallets-section">
+      <div class="section-header-row">
+        <div class="section-title">Detected Wallets on Page</div>
+        <span class="wallet-count-pill" id="page-wallet-count">0 found</span>
+      </div>
+      <div class="detected-wallet-list" id="detected-wallet-list">
+        <div class="empty-wallets-msg">Scanning active tab for wallet addresses...</div>
+      </div>
+    </div>
+
+    <!-- Manual Search Section -->
+    <div class="search-section">
+      <div class="section-title">Multi-Chain Address Checker</div>
+      <div class="input-group">
+        <input type="text" id="manual-addr-input" class="address-input" placeholder="Paste 0x..., 1A1..., addr1..., 5F3..., or rN7...">
+        <button id="scan-addr-btn" class="btn-primary">Scan</button>
+      </div>
+      <div class="quick-chips">
+        <span class="chip" data-addr="0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045">Vitalik.eth</span>
+        <span class="chip" data-addr="1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa">Satoshi BTC</span>
+        <span class="chip" data-addr="7xKXtg2CW87d8V6zXKBq7cM8Y2FPHwzaAkxqEqD7x4rH">Solana</span>
+        <span class="chip" data-addr="addr1vpu5vlrf4xkxv2qpwngf6cjhtw542ayty80v8dyr49rf5eg0yu80w">Cardano ADA</span>
+        <span class="chip" data-addr="5F3sa2TJAWMqDhXG6jhV4N8ko9SxwGy8TpaNS1repo5EYjQX">Polkadot DOT</span>
+        <span class="chip" data-addr="rN7n7otQDd6FczFgLdlqtyMVrn3HMfgnZh">Ripple XRP</span>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loader" class="loader">
+      <div class="spinner"></div>
+      <div>Querying XAI Reputation Engine...</div>
+    </div>
+
+    <!-- XAI Report View Card -->
+    <div id="result-card" class="result-card hidden">
+      <div class="popup-score-header">
+        <div class="popup-score-ring trusted" id="popup-score-ring">95</div>
+        <div class="popup-addr-meta">
+          <span class="risk-badge trusted" id="popup-risk-badge">LOW RISK</span>
+          <div class="full-addr" id="popup-full-addr">0xd8dA...6045</div>
+          <div id="popup-ens-tag" style="font-size:11px; color:#a5b4fc; margin-top:2px;"></div>
+        </div>
+      </div>
+
+      <!-- Likely Wallet Type Classification Box -->
+      <div class="classification-container">
+        <div class="class-title">Likely Wallet Type (XAI Prediction)</div>
+        <div class="classification-bars" id="classification-bars">
+          <!-- Dynamic Bars -->
+        </div>
+      </div>
+
+      <!-- Metrics Grid -->
+      <div class="mini-grid">
+        <div class="mini-item">
+          <div class="mini-lbl">Wallet Age</div>
+          <div class="mini-val" id="mini-age">--</div>
+        </div>
+        <div class="mini-item">
+          <div class="mini-lbl">Tx Count</div>
+          <div class="mini-val" id="mini-txs">--</div>
+        </div>
+        <div class="mini-item">
+          <div class="mini-lbl">Scam Reports</div>
+          <div class="mini-val" id="mini-reports">--</div>
+        </div>
+        <div class="mini-item">
+          <div class="mini-lbl">Graph Risk</div>
+          <div class="mini-val" id="mini-graph">--</div>
+        </div>
+      </div>
+
+      <!-- XAI Factors List -->
+      <div class="factors-box">
+        <div class="factors-sub">XAI Trust & Risk Signals</div>
+        <div class="factor-chip-list" id="popup-factor-list">
+          <!-- Dynamic Factors -->
+        </div>
+      </div>
+
+      <!-- Natural Language AI Chatbox Section -->
+      <div class="chatbox-section">
+        <div class="chatbox-title">💬 Ask ReputeX AI Assistant</div>
+        <div class="chat-preset-chips">
+          <span class="chat-preset-chip" data-q="Is this wallet safe?">Is this wallet safe?</span>
+          <span class="chat-preset-chip" data-q="Why is this wallet suspicious?">Why suspicious?</span>
+          <span class="chat-preset-chip" data-q="Has this wallet interacted with any risky addresses?">Risky connections?</span>
+        </div>
+        <div class="chat-input-group">
+          <input type="text" id="chat-input" class="chat-input" placeholder="Ask AI about this wallet...">
+          <button id="chat-send-btn" class="chat-send-btn">Ask</button>
+        </div>
+        <div id="chat-response-box" class="chat-response-box hidden"></div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
