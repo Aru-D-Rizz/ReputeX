@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "ReputeX: Web3 Wallet Reputation & Risk Assessment",
+  "name": "ReputeX: Web3 Wallet Reputation Overlay",
   "version": "1.0.3",
   "description": "Real-time, explainable AI reputation overlay & risk assessment for EVM, Bitcoin, and Solana wallet addresses.",
   "icons": {
