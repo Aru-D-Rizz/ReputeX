@@ -55,12 +55,12 @@
         <button id="scan-addr-btn" class="btn-primary">Scan</button>
       </div>
       <div class="quick-chips">
-        <span class="chip" data-addr="0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045">Vitalik.eth</span>
-        <span class="chip" data-addr="1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa">Satoshi BTC</span>
-        <span class="chip" data-addr="7xKXtg2CW87d8V6zXKBq7cM8Y2FPHwzaAkxqEqD7x4rH">Solana</span>
-        <span class="chip" data-addr="addr1vpu5vlrf4xkxv2qpwngf6cjhtw542ayty80v8dyr49rf5eg0yu80w">Cardano ADA</span>
-        <span class="chip" data-addr="5F3sa2TJAWMqDhXG6jhV4N8ko9SxwGy8TpaNS1repo5EYjQX">Polkadot DOT</span>
-        <span class="chip" data-addr="rN7n7otQDd6FczFgLdlqtyMVrn3HMfgnZh">Ripple XRP</span>
+        <span class="chip" data-addr="0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045">ETH (Vitalik)</span>
+        <span class="chip" data-addr="1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa">BTC (Genesis)</span>
+        <span class="chip" data-addr="7xKXtg2CW87d8V6zXKBq7cM8Y2FPHwzaAkxqEqD7x4rH">SOL</span>
+        <span class="chip" data-addr="addr1vpu5vlrf4xkxv2qpwngf6cjhtw542ayty80v8dyr49rf5eg0yu80w">ADA</span>
+        <span class="chip" data-addr="5F3sa2TJAWMqDhXG6jhV4N8ko9SxwGy8TpaNS1repo5EYjQX">DOT</span>
+        <span class="chip" data-addr="rN7n7otQDd6FczFgLdlqtyMVrn3HMfgnZh">XRP</span>
       </div>
     </div>
 
@@ -72,64 +72,127 @@
 
     <!-- XAI Report View Card -->
     <div id="result-card" class="result-card hidden">
+      <!-- Score Header -->
       <div class="popup-score-header">
         <div class="popup-score-ring trusted" id="popup-score-ring">95</div>
         <div class="popup-addr-meta">
-          <span class="risk-badge trusted" id="popup-risk-badge">LOW RISK</span>
+          <div class="badge-row">
+            <span class="risk-badge trusted" id="popup-risk-badge">LOW RISK</span>
+            <span class="chain-badge ethereum" id="popup-chain-badge">ETH</span>
+            <button class="report-open-btn" id="open-report-btn" title="Report this address as scam">🚩 Report</button>
+          </div>
           <div class="full-addr" id="popup-full-addr">0xd8dA...6045</div>
-          <div id="popup-ens-tag" style="font-size:11px; color:#a5b4fc; margin-top:2px;"></div>
+          <div id="popup-ens-tag" class="ens-tag"></div>
         </div>
       </div>
 
-      <!-- Likely Wallet Type Classification Box -->
-      <div class="classification-container">
-        <div class="class-title">Likely Wallet Type (XAI Prediction)</div>
-        <div class="classification-bars" id="classification-bars">
-          <!-- Dynamic Bars -->
+      <!-- Result Tab Bar -->
+      <div class="result-tabs">
+        <button class="result-tab active" data-tab="score">📊 Score</button>
+        <button class="result-tab" data-tab="details">🔍 Details</button>
+        <button class="result-tab" data-tab="chat">💬 AI Chat</button>
+        <button class="result-tab" data-tab="history">📋 History</button>
+      </div>
+
+      <!-- Tab 1: Score & Classification -->
+      <div class="tab-pane" id="pane-score">
+        <!-- Classification Box -->
+        <div class="classification-container">
+          <div class="class-title">Likely Wallet Type (XAI Prediction)</div>
+          <div class="classification-bars" id="classification-bars"></div>
+        </div>
+
+        <!-- 6-Metric Grid -->
+        <div class="mini-grid">
+          <div class="mini-item">
+            <div class="mini-lbl">Wallet Age</div>
+            <div class="mini-val" id="mini-age">--</div>
+          </div>
+          <div class="mini-item">
+            <div class="mini-lbl">Tx Count</div>
+            <div class="mini-val" id="mini-txs">--</div>
+          </div>
+          <div class="mini-item">
+            <div class="mini-lbl">Balance</div>
+            <div class="mini-val" id="mini-balance">--</div>
+          </div>
+          <div class="mini-item">
+            <div class="mini-lbl">Volume (USD)</div>
+            <div class="mini-val" id="mini-volume">--</div>
+          </div>
+          <div class="mini-item">
+            <div class="mini-lbl">Scam Reports</div>
+            <div class="mini-val" id="mini-reports">--</div>
+          </div>
+          <div class="mini-item">
+            <div class="mini-lbl">Graph Risk</div>
+            <div class="mini-val" id="mini-graph">--</div>
+          </div>
         </div>
       </div>
 
-      <!-- Metrics Grid -->
-      <div class="mini-grid">
-        <div class="mini-item">
-          <div class="mini-lbl">Wallet Age</div>
-          <div class="mini-val" id="mini-age">--</div>
+      <!-- Tab 2: Details & Signals -->
+      <div class="tab-pane hidden" id="pane-details">
+        <!-- Contract Verification Pill -->
+        <div id="contract-status-container" class="hidden">
+          <div class="contract-status-pill verified" id="contract-status-pill">
+            <span>🛡️ Contract Source Code Verified</span>
+          </div>
         </div>
-        <div class="mini-item">
-          <div class="mini-lbl">Tx Count</div>
-          <div class="mini-val" id="mini-txs">--</div>
+
+        <!-- Factors List -->
+        <div class="factors-box">
+          <div class="factors-sub">XAI Trust & Risk Signals</div>
+          <div class="factor-chip-list" id="popup-factor-list"></div>
         </div>
-        <div class="mini-item">
-          <div class="mini-lbl">Scam Reports</div>
-          <div class="mini-val" id="mini-reports">--</div>
-        </div>
-        <div class="mini-item">
-          <div class="mini-lbl">Graph Risk</div>
-          <div class="mini-val" id="mini-graph">--</div>
+
+        <!-- Threat Reporting Form (Modal Box) -->
+        <div class="report-modal-box hidden" id="report-modal-box">
+          <div class="report-header">
+            <span class="report-title">🚩 Report Malicious Address</span>
+            <button class="report-close-btn" id="close-report-btn">✕</button>
+          </div>
+          <select id="report-category" class="report-select">
+            <option value="phishing">Phishing / Fake dApp</option>
+            <option value="drainer">Wallet Drainer Contract</option>
+            <option value="rugpull">Rug Pull / Honeypot</option>
+            <option value="impersonation">Impersonation / Fake Airdrop</option>
+            <option value="other">Other Malicious Activity</option>
+          </select>
+          <textarea id="report-desc" class="report-textarea" rows="2" placeholder="Brief details about the threat (optional)..."></textarea>
+          <button id="submit-report-btn" class="report-submit-btn">Submit Report to Supabase DB</button>
+          <div id="report-feedback" class="report-feedback hidden"></div>
         </div>
       </div>
 
-      <!-- XAI Factors List -->
-      <div class="factors-box">
-        <div class="factors-sub">XAI Trust & Risk Signals</div>
-        <div class="factor-chip-list" id="popup-factor-list">
-          <!-- Dynamic Factors -->
+      <!-- Tab 3: Natural Language AI Chat -->
+      <div class="tab-pane hidden" id="pane-chat">
+        <div class="chatbox-section">
+          <div class="chatbox-title">💬 Ask ReputeX AI Assistant</div>
+          <div class="chat-preset-chips">
+            <span class="chat-preset-chip" data-q="Is this wallet safe?">Is this wallet safe?</span>
+            <span class="chat-preset-chip" data-q="Why is this wallet suspicious?">Why suspicious?</span>
+            <span class="chat-preset-chip" data-q="Has this wallet interacted with any risky addresses?">Risky connections?</span>
+          </div>
+          <div class="chat-input-group">
+            <input type="text" id="chat-input" class="chat-input" placeholder="Ask AI about this wallet...">
+            <button id="chat-send-btn" class="chat-send-btn">Ask</button>
+          </div>
+          <div id="chat-response-box" class="chat-response-box hidden"></div>
         </div>
       </div>
 
-      <!-- Natural Language AI Chatbox Section -->
-      <div class="chatbox-section">
-        <div class="chatbox-title">💬 Ask ReputeX AI Assistant</div>
-        <div class="chat-preset-chips">
-          <span class="chat-preset-chip" data-q="Is this wallet safe?">Is this wallet safe?</span>
-          <span class="chat-preset-chip" data-q="Why is this wallet suspicious?">Why suspicious?</span>
-          <span class="chat-preset-chip" data-q="Has this wallet interacted with any risky addresses?">Risky connections?</span>
+      <!-- Tab 4: Scan History -->
+      <div class="tab-pane hidden" id="pane-history">
+        <div class="history-section">
+          <div class="history-header">
+            <span class="section-title">Recent Scans</span>
+            <button class="clear-history-btn" id="clear-history-btn">Clear</button>
+          </div>
+          <div class="history-list" id="history-list">
+            <div class="empty-wallets-msg">No scan history recorded yet.</div>
+          </div>
         </div>
-        <div class="chat-input-group">
-          <input type="text" id="chat-input" class="chat-input" placeholder="Ask AI about this wallet...">
-          <button id="chat-send-btn" class="chat-send-btn">Ask</button>
-        </div>
-        <div id="chat-response-box" class="chat-response-box hidden"></div>
       </div>
 
     </div>

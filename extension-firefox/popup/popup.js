@@ -1,6 +1,6 @@
 /**
  * ReputeX Extension Popup Controller - CSP & XSS Safe
- * Sends full contextual payload with each Nemotron AI Chat Assistant query.
+ * Multi-chain risk scoring, tab navigation, 6-metric grid, community reporting, & history
  */
 document.addEventListener('DOMContentLoaded', () => {
   const toggleInput = document.getElementById('reputex-toggle');
@@ -21,6 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const scoreRing = document.getElementById('popup-score-ring');
   const riskBadge = document.getElementById('popup-risk-badge');
+  const chainBadge = document.getElementById('popup-chain-badge');
   const fullAddr = document.getElementById('popup-full-addr');
   const ensTag = document.getElementById('popup-ens-tag');
 
@@ -28,20 +29,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const miniAge = document.getElementById('mini-age');
   const miniTxs = document.getElementById('mini-txs');
+  const miniBalance = document.getElementById('mini-balance');
+  const miniVolume = document.getElementById('mini-volume');
   const miniReports = document.getElementById('mini-reports');
   const miniGraph = document.getElementById('mini-graph');
+
+  const contractContainer = document.getElementById('contract-status-container');
+  const contractPill = document.getElementById('contract-status-pill');
   const factorList = document.getElementById('popup-factor-list');
 
+  // Tabs
+  const tabButtons = document.querySelectorAll('.result-tab');
+  const tabPanes = {
+    score: document.getElementById('pane-score'),
+    details: document.getElementById('pane-details'),
+    chat: document.getElementById('pane-chat'),
+    history: document.getElementById('pane-history')
+  };
+
+  // Report Modal
+  const openReportBtn = document.getElementById('open-report-btn');
+  const reportModalBox = document.getElementById('report-modal-box');
+  const closeReportBtn = document.getElementById('close-report-btn');
+  const reportCategory = document.getElementById('report-category');
+  const reportDesc = document.getElementById('report-desc');
+  const submitReportBtn = document.getElementById('submit-report-btn');
+  const reportFeedback = document.getElementById('report-feedback');
+
+  // Chat
   const chatInput = document.getElementById('chat-input');
   const chatSendBtn = document.getElementById('chat-send-btn');
   const chatResponseBox = document.getElementById('chat-response-box');
   const chatPresetChips = document.querySelectorAll('.chat-preset-chip');
+
+  // History
+  const historyList = document.getElementById('history-list');
+  const clearHistoryBtn = document.getElementById('clear-history-btn');
 
   let activeReportsMap = {};
   let detectedWallets = [];
   let currentActiveAddress = null;
   let currentActiveReportData = null;
 
+  // Initialize toggle state
   chrome.runtime.sendMessage({ action: 'GET_REPUTEX_STATE' }, (res) => {
     if (chrome.runtime.lastError) return;
     const isEnabled = res && res.enabled !== false;
@@ -67,6 +97,87 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Tab switching logic
+  tabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tabName = btn.getAttribute('data-tab');
+      tabButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      Object.keys(tabPanes).forEach(paneKey => {
+        if (paneKey === tabName) {
+          tabPanes[paneKey].classList.remove('hidden');
+        } else {
+          tabPanes[paneKey].classList.add('hidden');
+        }
+      });
+
+      if (tabName === 'history') {
+        loadAndRenderHistory();
+      }
+    });
+  });
+
+  // Report Modal Open/Close
+  if (openReportBtn) {
+    openReportBtn.addEventListener('click', () => {
+      reportModalBox.classList.toggle('hidden');
+      reportFeedback.className = 'report-feedback hidden';
+      reportFeedback.textContent = '';
+      if (!reportModalBox.classList.contains('hidden')) {
+        // switch to details tab where the report modal lives
+        tabButtons.forEach(b => b.classList.toggle('active', b.getAttribute('data-tab') === 'details'));
+        Object.keys(tabPanes).forEach(k => tabPanes[k].classList.toggle('hidden', k !== 'details'));
+      }
+    });
+  }
+
+  if (closeReportBtn) {
+    closeReportBtn.addEventListener('click', () => {
+      reportModalBox.classList.add('hidden');
+    });
+  }
+
+  if (submitReportBtn) {
+    submitReportBtn.addEventListener('click', () => {
+      if (!currentActiveAddress) {
+        alert('Please scan an address before submitting a report.');
+        return;
+      }
+      const category = reportCategory.value;
+      const description = reportDesc.value.trim();
+      const chain = currentActiveReportData?.chain || 'ethereum';
+
+      submitReportBtn.disabled = true;
+      submitReportBtn.textContent = 'Submitting...';
+
+      chrome.runtime.sendMessage({
+        action: 'SUBMIT_THREAT_REPORT',
+        address: currentActiveAddress,
+        chain,
+        category,
+        description
+      }, (res) => {
+        submitReportBtn.disabled = false;
+        submitReportBtn.textContent = 'Submit Report to Supabase DB';
+
+        if (res && res.success) {
+          reportFeedback.className = 'report-feedback success';
+          reportFeedback.textContent = '✅ Report submitted successfully to Supabase DB!';
+          reportDesc.value = '';
+          // Re-scan address after a brief delay to reflect updated community reports
+          setTimeout(() => {
+            performManualScan(currentActiveAddress);
+          }, 1200);
+        } else {
+          reportFeedback.className = 'report-feedback error';
+          reportFeedback.textContent = '❌ Failed to submit: ' + (res?.error || 'Network error');
+        }
+      });
+    });
+  }
+
+  // Scan Active Tab
   autoScanActiveTab();
 
   function autoScanActiveTab() {
@@ -119,22 +230,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const clean = address.trim();
     if (clean.startsWith('0x')) return /^0x[a-fA-F0-9]{40}$/.test(clean);
     if (/^(bc1[a-zA-Z0-9]{8,87}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/.test(clean)) return true;
-    if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(clean)) {
-      if (/^[0-9a-fA-F]+$/.test(clean)) return false;
-      return true;
-    }
+    if (/^(addr1[a-z0-9]{50,100}|addr_test1[a-z0-9]{50,100})$/i.test(clean)) return true;
+    if (/^[15][a-km-zA-HJ-NP-Z1-9]{46,47}$/.test(clean)) return true;
+    if (/^r[0-9a-zA-Z]{24,34}$/.test(clean)) return true;
+    if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(clean)) return true;
     if (/^[a-zA-Z0-9-]+\.(eth|org|io|crypto|wallet|dao)$/i.test(clean)) return true;
     return false;
   }
 
-  function renderDetectedWallets(wallets, reports, selectedAddr) {
+  function renderDetectedWallets(wallets, reports, selectedAddr = null) {
     detectedWalletList.textContent = '';
 
     if (!wallets || wallets.length === 0) {
       pageWalletCount.textContent = '0 found';
       const emptyMsg = document.createElement('div');
       emptyMsg.className = 'empty-wallets-msg';
-      emptyMsg.textContent = 'No wallet addresses detected on active tab.';
+      emptyMsg.textContent = 'No blockchain addresses found on this page.';
       detectedWalletList.appendChild(emptyMsg);
       return;
     }
@@ -148,46 +259,39 @@ document.addEventListener('DOMContentLoaded', () => {
         item.classList.add('selected');
       }
 
-      const rData = reports[addr];
-      let riskClass = 'caution';
-      let badgeText = 'Click to Check';
+      const addrSpan = document.createElement('span');
+      addrSpan.className = 'd-addr';
+      addrSpan.textContent = addr.length > 16 ? `${addr.substring(0, 8)}...${addr.substring(addr.length - 6)}` : addr;
 
-      if (rData) {
-        riskClass = rData.riskLevel.toLowerCase();
-        badgeText = `${rData.score} ${rData.riskCategory || rData.riskLevel.replace('_', ' ')}`;
+      const badgeSpan = document.createElement('span');
+      const rep = reports[addr.toLowerCase()];
+
+      if (rep && rep.score !== undefined) {
+        badgeSpan.className = `d-badge ${rep.riskLevel ? rep.riskLevel.toLowerCase() : 'trusted'}`;
+        badgeSpan.textContent = `${rep.score} ${rep.riskCategory || 'Risk'}`;
+      } else {
+        badgeSpan.className = 'd-badge';
+        badgeSpan.style.background = 'rgba(255, 255, 255, 0.08)';
+        badgeSpan.style.color = '#94a3b8';
+        badgeSpan.textContent = 'Click to Check';
       }
 
-      const short = addr.length > 20 ? `${addr.substring(0, 8)}...${addr.substring(addr.length - 6)}` : addr;
-
-      const dAddr = document.createElement('div');
-      dAddr.className = 'd-addr';
-      dAddr.textContent = short;
-
-      const dBadge = document.createElement('div');
-      dBadge.className = `d-badge ${riskClass}`;
-      dBadge.textContent = badgeText;
-
-      item.appendChild(dAddr);
-      item.appendChild(dBadge);
+      item.appendChild(addrSpan);
+      item.appendChild(badgeSpan);
 
       item.addEventListener('click', () => {
         document.querySelectorAll('.detected-wallet-item').forEach(el => el.classList.remove('selected'));
         item.classList.add('selected');
-        addrInput.value = addr;
-        chrome.storage.local.set({ reputex_selected_wallet: addr });
-        
-        performManualScan(addr, (data) => {
-          reports[addr] = data;
-          dBadge.className = `d-badge ${data.riskLevel.toLowerCase()}`;
-          dBadge.textContent = `${data.score} ${data.riskCategory || data.riskLevel.replace('_', ' ')}`;
-        });
+        performManualScan(addr);
       });
 
       detectedWalletList.appendChild(item);
     });
 
-    if (selectedAddr && wallets.includes(selectedAddr)) {
+    if (selectedAddr && wallets.some(w => w.toLowerCase() === selectedAddr.toLowerCase())) {
       performManualScan(selectedAddr);
+    } else if (wallets.length > 0 && !currentActiveAddress) {
+      performManualScan(wallets[0]);
     }
   }
 
@@ -217,7 +321,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function performManualScan(address, onComplete) {
     if (!validateAddressFormat(address)) {
-      alert('Please enter a valid EVM, Bitcoin, Solana address or Web3 domain name.');
+      alert('Please enter a valid EVM, Bitcoin, Solana, Cardano, Polkadot, or XRP address.');
       return;
     }
 
@@ -225,6 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loader.style.display = 'block';
     resultCard.classList.add('hidden');
     chatResponseBox.classList.add('hidden');
+    reportModalBox.classList.add('hidden');
 
     chrome.runtime.sendMessage({
       action: 'ANALYZE_ADDRESS',
@@ -238,6 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (response && response.data) {
         currentActiveReportData = response.data;
         renderReport(response.data);
+        saveScanToHistory(response.data);
         if (onComplete) onComplete(response.data);
       }
     });
@@ -253,7 +359,12 @@ document.addEventListener('DOMContentLoaded', () => {
     riskBadge.textContent = categoryText;
     riskBadge.className = `risk-badge ${data.riskLevel.toLowerCase()}`;
 
-    const shortAddr = data.address.length > 20 ? `${data.address.substring(0, 10)}...${data.address.substring(data.address.length - 8)}` : data.address;
+    // Chain Badge
+    const chainName = data.chain || (data.address.startsWith('0x') ? 'ethereum' : 'bitcoin');
+    chainBadge.textContent = getChainShortLabel(chainName);
+    chainBadge.className = `chain-badge ${chainName.toLowerCase()}`;
+
+    const shortAddr = data.address.length > 20 ? `${data.address.substring(0, 8)}...${data.address.substring(data.address.length - 6)}` : data.address;
     fullAddr.textContent = shortAddr;
     ensTag.textContent = data.ens ? `🏷️ ${data.ens}` : (data.metrics.verifiedLabel ? `🏷️ ${data.metrics.verifiedLabel}` : '');
 
@@ -264,12 +375,30 @@ document.addEventListener('DOMContentLoaded', () => {
       { type: "Other", pct: 5 }
     ]);
 
+    // 6 Metrics
     miniAge.textContent = `${data.metrics.walletAgeDays} d`;
     miniTxs.textContent = `${data.metrics.totalTxCount}`;
-    miniReports.textContent = `${data.metrics.scamReportCount}`;
-    miniReports.style.color = data.metrics.scamReportCount > 0 ? '#f87171' : '#34d399';
-    miniGraph.textContent = `${data.metrics.maliciousProximityScore}/100`;
+    miniBalance.textContent = data.currentBalance || data.metrics.currentBalance || (data.metrics.currentBalanceETH ? `${data.metrics.currentBalanceETH} ETH` : '--');
+    miniVolume.textContent = data.metrics.totalVolumeUSD ? `$${data.metrics.totalVolumeUSD.toLocaleString()}` : '--';
+    miniReports.textContent = `${data.metrics.scamReportCount || 0}`;
+    miniReports.style.color = (data.metrics.scamReportCount > 0) ? '#f87171' : '#34d399';
+    miniGraph.textContent = `${data.metrics.maliciousProximityScore || 0}/100`;
 
+    // Contract Verification Pill
+    if (data.isContract || data.metrics.isContract) {
+      contractContainer.classList.remove('hidden');
+      if (data.isVerifiedContract || data.metrics.isVerifiedContract) {
+        contractPill.className = 'contract-status-pill verified';
+        contractPill.textContent = '🛡️ Contract Source Code Verified';
+      } else {
+        contractPill.className = 'contract-status-pill unverified';
+        contractPill.textContent = '🚨 Unverified Contract Code (High Risk)';
+      }
+    } else {
+      contractContainer.classList.add('hidden');
+    }
+
+    // Factors List
     factorList.textContent = '';
 
     if (data.explanation && data.explanation.aiSynthesis) {
@@ -320,6 +449,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function getChainShortLabel(chain) {
+    switch ((chain || '').toLowerCase()) {
+      case 'ethereum': return 'ETH';
+      case 'bitcoin': return 'BTC';
+      case 'solana': return 'SOL';
+      case 'cardano': return 'ADA';
+      case 'polkadot': return 'DOT';
+      case 'xrp': return 'XRP';
+      case 'binance': return 'BSC';
+      default: return 'ETH';
+    }
+  }
+
   function renderClassificationBars(classList) {
     classificationBars.textContent = '';
     classList.forEach(c => {
@@ -350,34 +492,37 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // AI Chat Assistant
   chatPresetChips.forEach(chip => {
     chip.addEventListener('click', () => {
-      const question = chip.getAttribute('data-q');
-      chatInput.value = question;
-      handleChatQuestion(question);
+      const q = chip.getAttribute('data-q');
+      chatInput.value = q;
+      sendChatQuestion(q);
     });
   });
 
   chatSendBtn.addEventListener('click', () => {
     const q = chatInput.value.trim();
-    if (q) handleChatQuestion(q);
+    if (q) sendChatQuestion(q);
   });
 
   chatInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
       const q = chatInput.value.trim();
-      if (q) handleChatQuestion(q);
+      if (q) sendChatQuestion(q);
     }
   });
 
-  function handleChatQuestion(question) {
+  function sendChatQuestion(question) {
     if (!currentActiveAddress) {
-      alert('Please select or scan a wallet address first.');
+      alert('Please select or scan an address first.');
       return;
     }
 
+    chatSendBtn.disabled = true;
+    chatSendBtn.textContent = 'Thinking...';
     chatResponseBox.classList.remove('hidden');
-    chatResponseBox.textContent = '⚡ ReputeX AI is analyzing on-chain context payload...';
+    chatResponseBox.textContent = 'Querying Nemotron AI Web3 security consultant...';
 
     chrome.runtime.sendMessage({
       action: 'ASK_WALLET_CHAT',
@@ -385,21 +530,94 @@ document.addEventListener('DOMContentLoaded', () => {
       question: question,
       context: currentActiveReportData
     }, (res) => {
-      let answerText = '';
-      if (res) {
-        if (typeof res.answer === 'string') answerText = res.answer;
-        else if (res.data && typeof res.data.answer === 'string') answerText = res.data.answer;
-        else if (typeof res.data === 'string') answerText = res.data;
-      }
+      chatSendBtn.disabled = false;
+      chatSendBtn.textContent = 'Ask';
 
-      if (!answerText) {
-        const score = (currentActiveReportData && currentActiveReportData.score) || 80;
-        const cat = (currentActiveReportData && currentActiveReportData.riskCategory) || 'LOW';
-        const txs = (currentActiveReportData && currentActiveReportData.metrics && currentActiveReportData.metrics.totalTxCount) || 0;
-        answerText = `ReputeX AI Evaluation: This wallet holds a reputation score of ${score}/100 (${cat} Risk) across ${txs} transactions. No critical threat reports flagged.`;
+      if (res && res.answer) {
+        chatResponseBox.textContent = res.answer;
+      } else {
+        chatResponseBox.textContent = 'Unable to get response from AI consultant. Please try again.';
       }
-
-      chatResponseBox.textContent = `🤖 ${answerText}`;
     });
   }
+
+  // History Tracking (chrome.storage.local)
+  function saveScanToHistory(report) {
+    if (!report || !report.address) return;
+    chrome.storage.local.get(['reputex_scan_history'], (stored) => {
+      let history = stored.reputex_scan_history || [];
+      // Remove existing item if already exists
+      history = history.filter(item => item.address.toLowerCase() !== report.address.toLowerCase());
+      // Add to front
+      history.unshift({
+        address: report.address,
+        score: report.score,
+        riskLevel: report.riskLevel,
+        chain: report.chain || 'ethereum',
+        timestamp: Date.now()
+      });
+      // Keep last 25
+      if (history.length > 25) history = history.slice(0, 25);
+      chrome.storage.local.set({ reputex_scan_history: history });
+    });
+  }
+
+  function loadAndRenderHistory() {
+    chrome.storage.local.get(['reputex_scan_history'], (stored) => {
+      const history = stored.reputex_scan_history || [];
+      historyList.textContent = '';
+
+      if (history.length === 0) {
+        const msg = document.createElement('div');
+        msg.className = 'empty-wallets-msg';
+        msg.textContent = 'No scan history recorded yet.';
+        historyList.appendChild(msg);
+        return;
+      }
+
+      history.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'history-item';
+
+        const addrEl = document.createElement('span');
+        addrEl.className = 'history-addr';
+        addrEl.textContent = item.address.length > 18 ? `${item.address.substring(0, 8)}...${item.address.substring(item.address.length - 6)}` : item.address;
+
+        const metaEl = document.createElement('div');
+        metaEl.className = 'history-meta';
+
+        const chainBadgeEl = document.createElement('span');
+        chainBadgeEl.className = `chain-badge ${item.chain || 'ethereum'}`;
+        chainBadgeEl.textContent = getChainShortLabel(item.chain);
+
+        const scoreBadge = document.createElement('span');
+        scoreBadge.className = `d-badge ${item.riskLevel.toLowerCase()}`;
+        scoreBadge.textContent = `${item.score}`;
+
+        metaEl.appendChild(chainBadgeEl);
+        metaEl.appendChild(scoreBadge);
+
+        row.appendChild(addrEl);
+        row.appendChild(metaEl);
+
+        row.addEventListener('click', () => {
+          performManualScan(item.address);
+          // switch to score tab
+          tabButtons.forEach(b => b.classList.toggle('active', b.getAttribute('data-tab') === 'score'));
+          Object.keys(tabPanes).forEach(k => tabPanes[k].classList.toggle('hidden', k !== 'score'));
+        });
+
+        historyList.appendChild(row);
+      });
+    });
+  }
+
+  if (clearHistoryBtn) {
+    clearHistoryBtn.addEventListener('click', () => {
+      chrome.storage.local.set({ reputex_scan_history: [] }, () => {
+        loadAndRenderHistory();
+      });
+    });
+  }
+
 });

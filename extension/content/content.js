@@ -344,7 +344,22 @@
     riskLevelTag.style.fontWeight = '700';
     riskLevelTag.style.textTransform = 'uppercase';
     riskLevelTag.style.color = data.riskLevel === 'TRUSTED' ? '#34d399' : (data.riskLevel === 'CAUTION' ? '#facc15' : '#f87171');
+    riskLevelTag.style.display = 'flex';
+    riskLevelTag.style.alignItems = 'center';
+    riskLevelTag.style.gap = '6px';
     riskLevelTag.textContent = riskCategoryText;
+
+    const chainName = data.chain || (address.startsWith('0x') ? 'ethereum' : 'bitcoin');
+    const chainBadge = document.createElement('span');
+    chainBadge.style.display = 'inline-block';
+    chainBadge.style.fontSize = '9px';
+    chainBadge.style.padding = '1px 5px';
+    chainBadge.style.borderRadius = '4px';
+    chainBadge.style.fontWeight = '700';
+    chainBadge.style.background = 'rgba(99, 102, 241, 0.25)';
+    chainBadge.style.color = '#c7d2fe';
+    chainBadge.textContent = chainName.toUpperCase().substring(0, 3);
+    riskLevelTag.appendChild(chainBadge);
 
     const addrTitle = document.createElement('div');
     addrTitle.className = 'reputex-addr-title';
@@ -409,9 +424,14 @@
     const metricsGrid = document.createElement('div');
     metricsGrid.className = 'reputex-metrics-grid';
 
+    const balanceVal = data.currentBalance || data.metrics.currentBalance || (data.metrics.currentBalanceETH ? `${data.metrics.currentBalanceETH} ETH` : '--');
+    const volumeVal = data.metrics.totalVolumeUSD ? `$${Number(data.metrics.totalVolumeUSD).toLocaleString()}` : '--';
+
     const metricsData = [
       { label: 'Wallet Age', value: `${data.metrics.walletAgeDays} Days` },
       { label: 'Tx Count', value: `${data.metrics.totalTxCount} Txs` },
+      { label: 'Balance', value: balanceVal },
+      { label: 'Volume (USD)', value: volumeVal },
       { label: 'Scam Reports', value: `${data.metrics.scamReportCount} Reports`, color: data.metrics.scamReportCount > 0 ? '#f87171' : '#34d399' },
       { label: 'Graph Risk', value: `${data.metrics.maliciousProximityScore}/100` }
     ];

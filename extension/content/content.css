@@ -294,30 +294,33 @@
 /* Metrics Grid */
 .reputex-metrics-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 14px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  margin-bottom: 12px;
 }
 
 .reputex-metric-item {
   background: rgba(30, 41, 59, 0.4);
-  padding: 8px 10px;
+  padding: 6px 8px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .reputex-metric-label {
-  font-size: 10px;
+  font-size: 8.5px;
   color: #94a3b8;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
 }
 
 .reputex-metric-val {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   color: #e2e8f0;
   margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* XAI Explanation Section */
@@ -343,14 +346,28 @@
   padding-right: 4px;
 }
 
+.reputex-factor-list::-webkit-scrollbar {
+  width: 4px;
+}
+.reputex-factor-list::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.4);
+  border-radius: 4px;
+}
+.reputex-factor-list::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.4);
+  border-radius: 4px;
+}
+
 .reputex-factor-item {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  padding: 8px 10px;
+  padding: 7px 10px;
   border-radius: 8px;
   font-size: 11px;
   line-height: 1.4;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .reputex-factor-pos {

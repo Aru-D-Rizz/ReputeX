@@ -120,6 +120,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     return true;
   }
+
+  if (request.action === 'SUBMIT_THREAT_REPORT') {
+    submitThreatReport(request.address, request.chain, request.category, request.description)
+      .then(res => sendResponse(res))
+      .catch(err => sendResponse({ success: false, error: err.message }));
+    return true;
+  }
 });
 
 function validateAddressFormat(address) {
@@ -280,6 +287,28 @@ async function fetchReputationBatch(addresses) {
     }
     throw err;
   }
+async function submitThreatReport(address, chain, category, description) {
+  const primaryUrl = await getApiBaseUrl();
+  const urls = [
+    `${primaryUrl}/report`,
+    `${VERCEL_API_BASE_URL}/report`,
+    `${LOCAL_API_BASE_URL}/report`
+  ];
+  for (const url of urls) {
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ address, chain, category, description })
+      });
+      if (response.ok) {
+        cache.delete(address.toLowerCase());
+        const data = await response.json();
+        return { success: true, data };
+      }
+    } catch (e) {}
+  }
+  return { success: false, error: 'Could not connect to threat report endpoint.' };
 }
 
 function createFallbackReport(address) {

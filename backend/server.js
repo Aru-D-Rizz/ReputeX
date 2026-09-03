@@ -1,7 +1,8 @@
 const express = require('express');
 const cors = require('cors');
-const { fetchWalletMetrics } = require('./services/dataAggregator');
+const { fetchWalletMetrics, getLiveCryptoPrices } = require('./services/dataAggregator');
 const { calculateReputation, answerWalletQuestion } = require('./engine/xaiEngine');
+const dbService = require('./services/dbService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -73,15 +74,113 @@ app.all(['/api/reputation', '/api/reputation/', '/'], (req, res) => {
   res.json({
     status: 'ok',
     service: 'ReputeX XAI Engine API',
-    message: 'ReputeX API backend is online and operational.',
+    message: 'ReputeX API backend is online and operational with Supabase DB & CoinGecko.',
     endpoints: {
       analyze: 'POST /api/reputation/analyze',
       chat: 'POST /api/reputation/chat',
       batch: 'POST /api/reputation/batch',
+      prices: 'GET /api/reputation/prices',
+      report: 'POST /api/reputation/report',
+      reports: 'GET /api/reputation/reports/:address',
+      watchlist: 'GET/POST/DELETE /api/reputation/watchlist',
       health: 'GET /health'
     },
     timestamp: new Date().toISOString()
   });
+});
+
+// Live Crypto Prices Endpoint (CoinGecko Feed)
+app.get(['/api/reputation/prices', '/reputation/prices', '/prices'], async (req, res) => {
+  try {
+    const prices = await getLiveCryptoPrices();
+    res.json({ status: 'ok', prices, timestamp: new Date().toISOString() });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch live crypto prices.' });
+  }
+});
+
+// Submit Community Threat Report (Supabase)
+app.post(['/api/reputation/report', '/reputation/report', '/report'], async (req, res) => {
+  try {
+    const { address, chain, category, description } = req.body;
+    if (!address || !category) {
+      return res.status(400).json({ error: 'Address and category are required.' });
+    }
+    const reporterIp = req.ip || req.headers['x-forwarded-for'] || null;
+    const result = await dbService.saveThreatReport({
+      address: address.trim(),
+      chain: chain || 'ethereum',
+      category: category.trim(),
+      description: description ? description.trim() : '',
+      reporterIp
+    });
+
+    // Invalidate analyze cache for this address
+    analyzeCache.delete(address.trim().toLowerCase());
+
+    if (result.success) {
+      res.json({ status: 'ok', message: 'Threat report recorded successfully.', report: result.report });
+    } else {
+      res.status(500).json({ error: result.error || 'Failed to record report.' });
+    }
+  } catch (err) {
+    console.error('Error recording threat report:', err);
+    res.status(500).json({ error: 'Internal server error recording threat report.' });
+  }
+});
+
+// Fetch Community Reports for an Address (Supabase)
+app.get(['/api/reputation/reports/:address', '/reputation/reports/:address', '/reports/:address'], async (req, res) => {
+  try {
+    const addr = req.params.address;
+    if (!addr) return res.status(400).json({ error: 'Address is required.' });
+    const data = await dbService.getThreatReportsForAddress(addr);
+    res.json({ status: 'ok', address: addr, count: data.count, reports: data.reports });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch threat reports.' });
+  }
+});
+
+// Add to Watchlist (Supabase)
+app.post(['/api/reputation/watchlist', '/reputation/watchlist', '/watchlist'], async (req, res) => {
+  try {
+    const { clientId, address, chain, label, lastScore } = req.body;
+    if (!clientId || !address) {
+      return res.status(400).json({ error: 'clientId and address are required.' });
+    }
+    const result = await dbService.addToWatchlist({ clientId, address, chain, label, lastScore });
+    if (result.success) {
+      res.json({ status: 'ok', item: result.item });
+    } else {
+      res.status(500).json({ error: result.error || 'Failed to add to watchlist.' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to add to watchlist.' });
+  }
+});
+
+// Get Watchlist (Supabase)
+app.get(['/api/reputation/watchlist/:clientId', '/reputation/watchlist/:clientId', '/watchlist/:clientId'], async (req, res) => {
+  try {
+    const clientId = req.params.clientId;
+    const items = await dbService.getWatchlist(clientId);
+    res.json({ status: 'ok', items });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch watchlist.' });
+  }
+});
+
+// Remove from Watchlist (Supabase)
+app.delete(['/api/reputation/watchlist/:id', '/reputation/watchlist/:id', '/watchlist/:id'], async (req, res) => {
+  try {
+    const id = req.params.id;
+    const clientId = req.query.clientId || (req.body && req.body.clientId);
+    if (!clientId) return res.status(400).json({ error: 'clientId is required.' });
+    const result = await dbService.removeFromWatchlist(id, clientId);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to remove from watchlist.' });
+  }
 });
 
 /**

@@ -377,6 +377,37 @@ async function calculateReputation(metrics) {
     });
   }
 
+  // Smart Contract Verification Check
+  if (metrics.isContract) {
+    if (metrics.isVerifiedContract) {
+      baseScore += 12;
+      positiveFactors.push({
+        code: "VERIFIED_SMART_CONTRACT",
+        title: "Verified Contract Source Code",
+        description: "Smart contract source code and ABI are publicly verified on Etherscan.",
+        weight: "HIGH"
+      });
+    } else {
+      baseScore -= 20;
+      negativeFactors.push({
+        code: "UNVERIFIED_SMART_CONTRACT",
+        title: "Unverified Contract Code",
+        description: "Contract source code is unverified. Elevated risk of honeypot or drainer.",
+        severity: "HIGH"
+      });
+    }
+  }
+
+  // Community Threat Reports Flag
+  if (metrics.communityReportCount && metrics.communityReportCount > 0) {
+    negativeFactors.push({
+      code: "COMMUNITY_THREAT_REPORTS",
+      title: "Community Threat Flag",
+      description: `Reported by ${metrics.communityReportCount} user(s) in ReputeX community threat database.`,
+      severity: "HIGH"
+    });
+  }
+
   const finalScore = Math.max(0, Math.min(100, Math.round(baseScore)));
 
   let riskCategory = "MEDIUM";
@@ -401,10 +432,15 @@ async function calculateReputation(metrics) {
 
   return {
     address: metrics.address,
+    chain: metrics.chain || 'ethereum',
     score: finalScore,
     riskCategory: riskCategory,
     riskLevel: riskLevel,
     ens: metrics.ens,
+    currentBalance: metrics.currentBalance,
+    isContract: metrics.isContract || false,
+    isVerifiedContract: metrics.isVerifiedContract || false,
+    communityReportCount: metrics.communityReportCount || 0,
     classification: classification,
     metrics: metrics,
     explanation: {

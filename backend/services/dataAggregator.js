@@ -46,6 +46,54 @@ const KNOWN_CONTRACT_PROTOCOLS = {
   '0x71c7656ec7ab88b098defb751b7401b5f6d8976f': 'BNB Chain Core Vault'
 };
 
+const dbService = require('./dbService');
+
+// CoinGecko Live Price Feed Cache (5-minute TTL)
+let cachedCryptoPrices = {
+  ethereum: 2405.71,
+  bitcoin: 77714,
+  solana: 100.78,
+  cardano: 0.207,
+  polkadot: 0.878,
+  ripple: 1.37,
+  binancecoin: 693.95,
+  lastUpdated: 0
+};
+
+const COINGECKO_API_KEY = process.env.COINGECKO_API_KEY || 'CG-bJ89euHb8ud1S99Sf2pC3czY';
+
+async function getLiveCryptoPrices() {
+  const now = Date.now();
+  if (now - cachedCryptoPrices.lastUpdated < 5 * 60 * 1000 && cachedCryptoPrices.lastUpdated > 0) {
+    return cachedCryptoPrices;
+  }
+  try {
+    const url = `https://api.coingecko.com/api/v3/simple/price?vs_currencies=usd&ids=bitcoin,ethereum,solana,cardano,polkadot,ripple,binancecoin&x_cg_demo_api_key=${COINGECKO_API_KEY}`;
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), 3000);
+    const resp = await fetch(url, { signal: controller.signal });
+    clearTimeout(id);
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data && data.ethereum && data.bitcoin) {
+        cachedCryptoPrices = {
+          ethereum: data.ethereum.usd || cachedCryptoPrices.ethereum,
+          bitcoin: data.bitcoin.usd || cachedCryptoPrices.bitcoin,
+          solana: data.solana ? data.solana.usd : cachedCryptoPrices.solana,
+          cardano: data.cardano ? data.cardano.usd : cachedCryptoPrices.cardano,
+          polkadot: data.polkadot ? data.polkadot.usd : cachedCryptoPrices.polkadot,
+          ripple: data.ripple ? data.ripple.usd : cachedCryptoPrices.ripple,
+          binancecoin: data.binancecoin ? data.binancecoin.usd : cachedCryptoPrices.binancecoin,
+          lastUpdated: now
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('[CoinGecko] Price fetch notice:', err.message);
+  }
+  return cachedCryptoPrices;
+}
+
 /**
  * Strict 2.5s Timeout Fetch Utility for External API calls
  */
@@ -67,10 +115,13 @@ async function fetchEtherscanLiveMetrics(address, ensDomain = null) {
     
     const balanceUrl = `https://api.etherscan.io/v2/api?chainid=1&module=account&action=balance&address=${cleanAddr}&tag=latest&apikey=${ETHERSCAN_API_KEY}`;
     const txUrl = `https://api.etherscan.io/v2/api?chainid=1&module=account&action=txlist&address=${cleanAddr}&startblock=0&endblock=99999999&page=1&offset=100&sort=asc&apikey=${ETHERSCAN_API_KEY}`;
+    const abiUrl = `https://api.etherscan.io/v2/api?chainid=1&module=contract&action=getabi&address=${cleanAddr}&apikey=${ETHERSCAN_API_KEY}`;
 
-    const [balRes, txRes] = await Promise.all([
+    const [balRes, txRes, abiRes, prices] = await Promise.all([
       fetchWithTimeout(balanceUrl, {}, 2500),
-      fetchWithTimeout(txUrl, {}, 2500)
+      fetchWithTimeout(txUrl, {}, 2500),
+      fetchWithTimeout(abiUrl, {}, 2500),
+      getLiveCryptoPrices()
     ]);
 
     if (!txRes || txRes.status !== '1' || !Array.isArray(txRes.result)) {
@@ -98,13 +149,23 @@ async function fetchEtherscanLiveMetrics(address, ensDomain = null) {
       ethBalance = (parseFloat(balRes.result) / 1e18) || 0;
     }
 
-    const totalVolumeUSD = parseFloat((ethBalance * 2600 + (txCount * 140)).toFixed(2));
+    const ethPrice = (prices && prices.ethereum) ? prices.ethereum : 2405;
+    const totalVolumeUSD = parseFloat((ethBalance * ethPrice + (txCount * 140)).toFixed(2));
     const txFrequencyPerDay = parseFloat((txCount / Math.max(1, walletAgeDays)).toFixed(2));
 
     const counterparties = new Set();
     const protocolSet = new Set();
     let isContract = false;
+    let isVerifiedContract = false;
     let largestTxUSD = 0;
+
+    if (abiRes && abiRes.status === '1' && typeof abiRes.result === 'string' && abiRes.result.startsWith('[')) {
+      isContract = true;
+      isVerifiedContract = true;
+    } else if (abiRes && typeof abiRes.result === 'string' && abiRes.result.toLowerCase().includes('not verified')) {
+      isContract = true;
+      isVerifiedContract = false;
+    }
 
     txList.forEach(tx => {
       if (tx.to) {
@@ -118,7 +179,7 @@ async function fetchEtherscanLiveMetrics(address, ensDomain = null) {
       if (tx.contractAddress && tx.contractAddress !== '') isContract = true;
       
       const valEth = parseFloat(tx.value || '0') / 1e18;
-      const valUSD = valEth * 2600;
+      const valUSD = valEth * ethPrice;
       if (valUSD > largestTxUSD) largestTxUSD = valUSD;
     });
 
@@ -129,6 +190,7 @@ async function fetchEtherscanLiveMetrics(address, ensDomain = null) {
 
     return {
       address: cleanAddr,
+      chain: 'ethereum',
       ens: ensDomain,
       walletAgeDays: walletAgeDays,
       firstSeenDate: firstSeenDate,
@@ -136,6 +198,7 @@ async function fetchEtherscanLiveMetrics(address, ensDomain = null) {
       totalTxCount: txCount,
       txFrequencyPerDay: txFrequencyPerDay,
       totalVolumeUSD: totalVolumeUSD,
+      currentBalance: `${ethBalance.toFixed(4)} ETH`,
       currentBalanceETH: parseFloat(ethBalance.toFixed(4)),
       largestTxUSD: parseFloat(largestTxUSD.toFixed(2)),
       avgTxValueUSD: parseFloat((totalVolumeUSD / Math.max(1, txCount)).toFixed(2)),
@@ -149,6 +212,7 @@ async function fetchEtherscanLiveMetrics(address, ensDomain = null) {
       dormantSpikeDetected: false,
       protocolInteractions: protocolInteractions,
       isContract: isContract,
+      isVerifiedContract: isVerifiedContract,
       verifiedLabel: ensDomain ? `Resolved domain: ${ensDomain}` : null,
       knownThreat: null,
       dataSource: "LIVE_ETHERSCAN_API_V2"
@@ -169,9 +233,10 @@ async function fetchBlockstreamBtcMetrics(address) {
     const addressUrl = `https://blockstream.info/api/address/${cleanAddr}`;
     const txsUrl = `https://blockstream.info/api/address/${cleanAddr}/txs`;
 
-    const [addrRes, txsRes] = await Promise.all([
+    const [addrRes, txsRes, prices] = await Promise.all([
       fetchWithTimeout(addressUrl, {}, 2500),
-      fetchWithTimeout(txsUrl, {}, 2500)
+      fetchWithTimeout(txsUrl, {}, 2500),
+      getLiveCryptoPrices()
     ]);
 
     if (!addrRes || !addrRes.chain_stats) return null;
@@ -183,7 +248,8 @@ async function fetchBlockstreamBtcMetrics(address) {
     const spentSatoshis = stats.spent_txo_sum || 0;
     const btcBalance = (fundedSatoshis - spentSatoshis) / 1e8;
     const totalVolumeBtc = fundedSatoshis / 1e8;
-    const totalVolumeUSD = parseFloat((totalVolumeBtc * 60000).toFixed(2));
+    const btcPrice = (prices && prices.bitcoin) ? prices.bitcoin : 77714;
+    const totalVolumeUSD = parseFloat((totalVolumeBtc * btcPrice).toFixed(2));
 
     let walletAgeDays = 365;
     let firstSeenDate = "2023-01-01";
@@ -219,6 +285,7 @@ async function fetchBlockstreamBtcMetrics(address) {
 
     return {
       address: cleanAddr,
+      chain: 'bitcoin',
       ens: null,
       walletAgeDays: walletAgeDays,
       firstSeenDate: firstSeenDate,
@@ -226,6 +293,7 @@ async function fetchBlockstreamBtcMetrics(address) {
       totalTxCount: txCount,
       txFrequencyPerDay: parseFloat((txCount / Math.max(1, walletAgeDays)).toFixed(2)),
       totalVolumeUSD: totalVolumeUSD,
+      currentBalance: `${btcBalance.toFixed(4)} BTC`,
       currentBalanceBTC: parseFloat(btcBalance.toFixed(4)),
       largestTxUSD: parseFloat((totalVolumeUSD * 0.15).toFixed(2)),
       avgTxValueUSD: parseFloat((totalVolumeUSD / Math.max(1, txCount)).toFixed(2)),
@@ -423,11 +491,14 @@ async function fetchWalletMetrics(addressInput) {
     k => k.toLowerCase() === lowerAddr
   );
 
+  let profile = null;
+
   if (knownEntryKey) {
     const known = scamDb.knownScams[knownEntryKey];
     if (known.type === 'VERIFIED_IDENTITY' || known.type === 'VERIFIED_PROTOCOL') {
-      return {
+      profile = {
         address: normalizedAddr,
+        chain: 'ethereum',
         ens: resolvedEnsName || known.ens || (known.type === 'VERIFIED_PROTOCOL' ? `${known.details.split(' ')[0].toLowerCase()}.eth` : null),
         walletAgeDays: 1450,
         firstSeenDate: "2020-04-12",
@@ -435,6 +506,7 @@ async function fetchWalletMetrics(addressInput) {
         totalTxCount: 8420,
         txFrequencyPerDay: 5.8,
         totalVolumeUSD: 1450000,
+        currentBalance: '12.5 ETH',
         currentBalanceETH: 12.5,
         largestTxUSD: 120000,
         avgTxValueUSD: 172.2,
@@ -448,13 +520,15 @@ async function fetchWalletMetrics(addressInput) {
         dormantSpikeDetected: false,
         protocolInteractions: ["Uniswap V3", "Aave V3", "OpenSea Marketplace", "Lido", "Curve"],
         isContract: known.type === 'VERIFIED_PROTOCOL',
+        isVerifiedContract: known.type === 'VERIFIED_PROTOCOL',
         verifiedLabel: known.details,
         knownThreat: null,
         dataSource: "VERIFIED_REGISTRY"
       };
     } else if (known.type === 'NULL_DRAINER' || known.type === 'PHISHING_DRAINER' || known.type === 'SUSPICIOUS_AIRDROP') {
-      return {
+      profile = {
         address: normalizedAddr,
+        chain: 'ethereum',
         ens: resolvedEnsName || null,
         walletAgeDays: 14,
         firstSeenDate: "2024-07-20",
@@ -462,6 +536,7 @@ async function fetchWalletMetrics(addressInput) {
         totalTxCount: 140,
         txFrequencyPerDay: 10.0,
         totalVolumeUSD: 85000,
+        currentBalance: '0.1 ETH',
         currentBalanceETH: 0.1,
         largestTxUSD: 25000,
         avgTxValueUSD: 607.1,
@@ -475,6 +550,7 @@ async function fetchWalletMetrics(addressInput) {
         dormantSpikeDetected: true,
         protocolInteractions: ["TornadoCash", "Disperser"],
         isContract: false,
+        isVerifiedContract: false,
         verifiedLabel: null,
         knownThreat: known.details,
         dataSource: "SECURITY_BLACKLIST_DB"
@@ -483,95 +559,131 @@ async function fetchWalletMetrics(addressInput) {
   }
 
   // Cardano (ADA) Address Check
-  if (/^(addr1[a-z0-9]{50,100}|addr_test1[a-z0-9]{50,100})$/i.test(normalizedAddr)) {
-    const liveAdaData = await fetchCardanoMetrics(normalizedAddr);
-    if (liveAdaData) return liveAdaData;
+  if (!profile && /^(addr1[a-z0-9]{50,100}|addr_test1[a-z0-9]{50,100})$/i.test(normalizedAddr)) {
+    profile = await fetchCardanoMetrics(normalizedAddr);
   }
 
   // XRP Ledger (XRP) Address Check
-  if (/^r[0-9a-zA-Z]{24,34}$/.test(normalizedAddr)) {
-    const liveXrpData = await fetchXrpMetrics(normalizedAddr);
-    if (liveXrpData) return liveXrpData;
+  if (!profile && /^r[0-9a-zA-Z]{24,34}$/.test(normalizedAddr)) {
+    profile = await fetchXrpMetrics(normalizedAddr);
   }
 
   // Polkadot (DOT) Address Check
-  if (/^[15][a-km-zA-HJ-NP-Z1-9]{46,47}$/.test(normalizedAddr) && !normalizedAddr.startsWith('0x')) {
-    const liveDotData = await fetchPolkadotMetrics(normalizedAddr);
-    if (liveDotData) return liveDotData;
+  if (!profile && /^[15][a-km-zA-HJ-NP-Z1-9]{46,47}$/.test(normalizedAddr) && !normalizedAddr.startsWith('0x')) {
+    profile = await fetchPolkadotMetrics(normalizedAddr);
   }
 
   // Bitcoin Address Check
   const btcPattern = /^(bc1[a-zA-Z0-9]{8,87}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})$/;
-  if (btcPattern.test(normalizedAddr)) {
-    const liveBtcData = await fetchBlockstreamBtcMetrics(normalizedAddr);
-    if (liveBtcData) return liveBtcData;
+  if (!profile && btcPattern.test(normalizedAddr)) {
+    profile = await fetchBlockstreamBtcMetrics(normalizedAddr);
   }
 
   // EVM / BNB Address Check
-  if (normalizedAddr.startsWith('0x') && normalizedAddr.length === 42) {
-    const liveEtherscanData = await fetchEtherscanLiveMetrics(normalizedAddr, resolvedEnsName);
-    if (liveEtherscanData) return liveEtherscanData;
+  if (!profile && normalizedAddr.startsWith('0x') && normalizedAddr.length === 42) {
+    profile = await fetchEtherscanLiveMetrics(normalizedAddr, resolvedEnsName);
   }
 
-  // Fallback Simulation Generator
-  const seed = hashAddress(lowerAddr);
-  const walletAgeDays = (seed % 1200) + 1;
-  const totalTxCount = (seed % 500);
-  const totalVolumeUSD = parseFloat(((seed % 1000) * 45).toFixed(2));
-  
-  const isHighRiskSeed = (seed % 10) === 0;
-  const isCautionSeed = (seed % 4) === 0 && !isHighRiskSeed;
+  // Fallback Simulation Generator if live fetch fails or address is simulated
+  if (!profile) {
+    const seed = hashAddress(lowerAddr);
+    const walletAgeDays = (seed % 1200) + 1;
+    const totalTxCount = (seed % 500);
+    const totalVolumeUSD = parseFloat(((seed % 1000) * 45).toFixed(2));
+    
+    const isHighRiskSeed = (seed % 10) === 0;
+    const isCautionSeed = (seed % 4) === 0 && !isHighRiskSeed;
 
-  let scamReportCount = 0;
-  let maliciousProximityScore = (seed % 15);
-  let knownThreat = null;
+    let scamReportCount = 0;
+    let maliciousProximityScore = (seed % 15);
+    let knownThreat = null;
 
-  if (isHighRiskSeed) {
-    scamReportCount = (seed % 25) + 3;
-    maliciousProximityScore = 80 + (seed % 20);
-    knownThreat = "Flagged in community reports for unverified contract interaction & token drain attempts.";
-  } else if (isCautionSeed) {
-    scamReportCount = (seed % 2);
-    maliciousProximityScore = 40 + (seed % 30);
-  }
-
-  const availableProtocols = ["Uniswap V3", "Aave V3", "OpenSea Marketplace", "1inch", "Lido", "Balancer", "PancakeSwap"];
-  const numProtocols = (seed % 4) + (isHighRiskSeed ? 0 : 1);
-  const protocolInteractions = [];
-  for (let i = 0; i < numProtocols; i++) {
-    const proto = availableProtocols[(seed + i) % availableProtocols.length];
-    if (!protocolInteractions.includes(proto)) {
-      protocolInteractions.push(proto);
+    if (isHighRiskSeed) {
+      scamReportCount = (seed % 25) + 3;
+      maliciousProximityScore = 80 + (seed % 20);
+      knownThreat = "Flagged in community reports for unverified contract interaction & token drain attempts.";
+    } else if (isCautionSeed) {
+      scamReportCount = (seed % 2);
+      maliciousProximityScore = 40 + (seed % 30);
     }
+
+    const availableProtocols = ["Uniswap V3", "Aave V3", "OpenSea Marketplace", "1inch", "Lido", "Balancer", "PancakeSwap"];
+    const numProtocols = (seed % 4) + (isHighRiskSeed ? 0 : 1);
+    const protocolInteractions = [];
+    for (let i = 0; i < numProtocols; i++) {
+      const proto = availableProtocols[(seed + i) % availableProtocols.length];
+      if (!protocolInteractions.includes(proto)) {
+        protocolInteractions.push(proto);
+      }
+    }
+
+    profile = {
+      address: normalizedAddr,
+      ens: resolvedEnsName || `user_${lowerAddr.substring(2, 6)}.eth`,
+      walletAgeDays: walletAgeDays,
+      firstSeenDate: "2022-01-15",
+      lastActiveDate: new Date().toISOString().split('T')[0],
+      totalTxCount: totalTxCount,
+      txFrequencyPerDay: parseFloat((totalTxCount / Math.max(1, walletAgeDays)).toFixed(2)),
+      totalVolumeUSD: totalVolumeUSD,
+      largestTxUSD: parseFloat((totalVolumeUSD * 0.2).toFixed(2)),
+      avgTxValueUSD: parseFloat((totalVolumeUSD / Math.max(1, totalTxCount)).toFixed(2)),
+      uniqueCounterparties: Math.min(totalTxCount * 2, 120),
+      riskyCounterparties: isHighRiskSeed ? 8 : 0,
+      scamReportCount: scamReportCount,
+      maliciousProximityScore: maliciousProximityScore,
+      oneHopRiskyConnections: isHighRiskSeed ? 4 : 0,
+      twoHopRiskyConnections: isHighRiskSeed ? 15 : 1,
+      fundVelocity: totalTxCount > 100 ? "HIGH" : "LOW",
+      dormantSpikeDetected: isHighRiskSeed,
+      protocolInteractions: protocolInteractions,
+      isContract: false,
+      isVerifiedContract: false,
+      verifiedLabel: null,
+      knownThreat: knownThreat,
+      dataSource: "DETERMINISTIC_ENGINE_FALLBACK"
+    };
   }
 
-  return {
-    address: normalizedAddr,
-    ens: resolvedEnsName || `user_${lowerAddr.substring(2, 6)}.eth`,
-    walletAgeDays: walletAgeDays,
-    firstSeenDate: "2022-01-15",
-    lastActiveDate: new Date().toISOString().split('T')[0],
-    totalTxCount: totalTxCount,
-    txFrequencyPerDay: parseFloat((totalTxCount / Math.max(1, walletAgeDays)).toFixed(2)),
-    totalVolumeUSD: totalVolumeUSD,
-    largestTxUSD: parseFloat((totalVolumeUSD * 0.2).toFixed(2)),
-    avgTxValueUSD: parseFloat((totalVolumeUSD / Math.max(1, totalTxCount)).toFixed(2)),
-    uniqueCounterparties: Math.min(totalTxCount * 2, 120),
-    riskyCounterparties: isHighRiskSeed ? 8 : 0,
-    scamReportCount: scamReportCount,
-    maliciousProximityScore: maliciousProximityScore,
-    oneHopRiskyConnections: isHighRiskSeed ? 4 : 0,
-    twoHopRiskyConnections: isHighRiskSeed ? 15 : 1,
-    fundVelocity: totalTxCount > 100 ? "HIGH" : "LOW",
-    dormantSpikeDetected: isHighRiskSeed,
-    protocolInteractions: protocolInteractions,
-    isContract: false,
-    verifiedLabel: null,
-    knownThreat: knownThreat,
-    dataSource: "DETERMINISTIC_ENGINE_FALLBACK"
-  };
+  // Detect and set blockchain network
+  if (!profile.chain) {
+    if (normalizedAddr.startsWith('0x')) profile.chain = 'ethereum';
+    else if (/^(bc1|[13])/.test(normalizedAddr)) profile.chain = 'bitcoin';
+    else if (/^(addr1|addr_test1)/i.test(normalizedAddr)) profile.chain = 'cardano';
+    else if (/^[15]/.test(normalizedAddr)) profile.chain = 'polkadot';
+    else if (/^r/.test(normalizedAddr)) profile.chain = 'xrp';
+    else profile.chain = 'solana';
+  }
+
+  // Ensure human-readable balance format
+  if (!profile.currentBalance) {
+    if (profile.currentBalanceETH !== undefined) profile.currentBalance = `${profile.currentBalanceETH} ETH`;
+    else if (profile.currentBalanceBTC !== undefined) profile.currentBalance = `${profile.currentBalanceBTC} BTC`;
+    else if (profile.currentBalanceADA !== undefined) profile.currentBalance = `${profile.currentBalanceADA} ADA`;
+    else if (profile.currentBalanceXRP !== undefined) profile.currentBalance = `${profile.currentBalanceXRP} XRP`;
+    else profile.currentBalance = `$${(profile.totalVolumeUSD * 0.1).toFixed(2)}`;
+  }
+
+  // Integrate live community threat reports from Supabase DB
+  try {
+    const communityData = await dbService.getThreatReportsForAddress(normalizedAddr);
+    if (communityData && communityData.count > 0) {
+      profile.communityReportCount = communityData.count;
+      profile.communityReports = communityData.reports;
+      profile.scamReportCount = (profile.scamReportCount || 0) + communityData.count;
+    } else {
+      profile.communityReportCount = 0;
+      profile.communityReports = [];
+    }
+  } catch (dbErr) {
+    profile.communityReportCount = 0;
+    profile.communityReports = [];
+  }
+
+  return profile;
 }
 
 module.exports = {
-  fetchWalletMetrics
+  fetchWalletMetrics,
+  getLiveCryptoPrices
 };
