@@ -1,211 +1,208 @@
-# ReputeX: Real-Time Web3 Blockchain Wallet Reputation & Risk Assessment
+# ReputeX: Multi-Chain Web3 Wallet Reputation & XAI Risk Assessment
 
-[![Manifest V3](https://img.shields.io/badge/Chrome_Extension-Manifest_V3-6366f1.svg)](https://developer.chrome.com/docs/extensions/mv3/intro/)
-[![Vercel Deployment](https://img.shields.io/badge/API_Backend-Vercel_Serverless-10b981.svg)](https://repute-x-iota.vercel.app/)
-[![Nvidia Nemotron 3 Ultra](https://img.shields.io/badge/OpenRouter_AI-Nvidia_Nemotron_3_Ultra_550B-c084fc.svg)](https://openrouter.ai/)
+[![Manifest V3](https://img.shields.io/badge/Extension-Manifest_V3-6366f1.svg)](https://developer.chrome.com/docs/extensions/mv3/intro/)
+[![Cross-Browser](https://img.shields.io/badge/Browsers-Chrome%20%7C%20Edge%20%7C%20Firefox%20%7C%20Opera%20%7C%20Brave-f59e0b.svg)](https://github.com/Aru-D-Rizz/ReputeX)
+[![API Backend](https://img.shields.io/badge/API_Backend-Vercel_Serverless%20%2B%20Node.js-10b981.svg)](https://repute-x-iota.vercel.app/)
+[![Database](https://img.shields.io/badge/Database-Supabase_PostgreSQL-3ecf8e.svg)](https://supabase.com/)
+[![Price Feed](https://img.shields.io/badge/Price_Feed-CoinGecko_Live_API-8dc63f.svg)](https://www.coingecko.com/)
+[![AI Engine](https://img.shields.io/badge/AI_Model-Nvidia_Nemotron_3.5_Lightning-c084fc.svg)](https://openrouter.ai/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**ReputeX** is a browser extension and explainable AI (XAI) security platform that automatically scans web pages for crypto wallet addresses (Ethereum EVM, Bitcoin, Solana, and ENS domains), highlights them in real time, and evaluates their reputation, entity classification, and risk profile.
+**ReputeX** is a browser extension and explainable AI (XAI) Web3 security platform. It automatically scans web pages for cryptocurrency wallet addresses across **6 major blockchains + ENS domains**, evaluates on-chain transaction history, verifies smart contract source code, cross-references community threat databases in real time, and renders an explainable reputation score with an interactive AI security consultant.
 
 ---
 
-## 📥 How to Download & Install the Extension
+## ✨ Implemented Features (Version 2.0)
 
-You do **not** need to install Node.js or run local servers to use the extension. The extension is pre-configured to connect directly to the live hosted Vercel API backend (`https://repute-x-iota.vercel.app/`).
-
-### Step 1: Download the Extension Code
-Choose one of the following methods to download the project:
-
-- **Method A (Direct ZIP Download)**:
-  1. Click **[Download ReputeX ZIP](https://github.com/Aru-D-Rizz/ReputeX/archive/refs/heads/main.zip)**.
-  2. Extract the downloaded `ReputeX-main.zip` file onto your computer (e.g., your Desktop or Downloads folder).
-
-- **Method B (Git Clone)**:
-  ```bash
-  git clone https://github.com/Aru-D-Rizz/ReputeX.git
-  ```
-
----
-
-### Step 2: Load Extension into Browser (Chrome / Edge / Brave)
-
-1. Open your browser and navigate to the extensions management page:
-   - **Google Chrome**: Go to `chrome://extensions`
-   - **Microsoft Edge**: Go to `edge://extensions`
-   - **Brave Browser**: Go to `brave://extensions`
-2. Enable **Developer mode** using the toggle switch in the **top-right corner**.
-3. Click the **Load unpacked** button in the **top-left corner**.
-4. Browse to your extracted `ReputeX` folder and select the **`extension`** folder (`ReputeX/extension`).
-
-> 🎉 **Done!** The ReputeX extension icon ⚡ will now appear in your browser toolbar.
+### 1. ⚡ Multi-Chain Address Detection & Highlighting
+- **6 Supported Blockchains + ENS**:
+  - **Ethereum & EVM Chains**: Full checksum validation for Ethereum, Binance Smart Chain, Polygon, Arbitrum, Optimism (`0x...` 42-char hex).
+  - **Bitcoin**: Legacy P2PKH (`1...`), Script P2SH (`3...`), Native SegWit (`bc1q...`), and Taproot (`bc1p...`).
+  - **Solana**: Base58 public keys (32–44 characters).
+  - **Cardano**: Shelley Bech32 mainnet and testnet addresses (`addr1...`, `addr_test1...`).
+  - **Polkadot**: SS58 Substrate relay chain addresses (`1...`, `5...`).
+  - **XRP Ledger**: Ripple Base58 accounts (`r...`).
+  - **ENS Domains**: Native resolution for `.eth`, `.org`, `.crypto`, `.wallet`, `.dao`.
+- **Read-Only DOM Parser**: High-performance text node tree walker that safely skips input boxes, password fields, scripts, styles, and iframes without injecting unverified code.
+- **Dynamic SPA Support**: Uses a debounced `MutationObserver` to automatically detect addresses loaded dynamically on Twitter/X, Etherscan, OpenSea, GitHub, and DexScreener.
+- **Non-Destructive Highlighting**: Replaces raw text with clickable badge pills (`⚡ ReputeX`, `🛡️ Safe`, `⚠️ Caution`, `🚨 Risk`) complying with strict Content Security Policies (CSP).
 
 ---
 
-### Step 3: Test & Verify the Extension
-
-1. Open the live interactive demo page: **[https://repute-x-iota.vercel.app/demo/demo.html](https://repute-x-iota.vercel.app/demo/demo.html)** (or open `demo/demo.html` locally).
-2. All Bitcoin, Ethereum, and Solana addresses on the page will automatically be highlighted with high-visibility badges.
-3. Click or hover over any address badge to view its **0–100 Reputation Score**, **Likely Wallet Type Classification**, and ask questions to the **Nemotron AI Chat Assistant**!
-
----
-
-## 🚀 Key Features
-
-- **⚡ Automatic Multi-Chain Address Scanner**:
-  - Automatically detects EVM (`0x...`), Bitcoin (`1...`, `3...`, `bc1q...`, `bc1p...`), Solana (`Base58`), and ENS (`.eth`, `.org`) domain addresses across Web3 sites (Etherscan, Blockstream Explorer, Twitter / X, OpenSea, GitHub).
-  - Non-destructive, read-only webpage DOM parsing complying with strict site Content Security Policies (CSP).
-
-- **🧠 OpenRouter Nvidia Nemotron 3 Ultra XAI Risk Engine**:
-  - Powered by **OpenRouter API** using **`nvidia/nemotron-3-ultra-550b-a55b:free`**.
-  - Combines deterministic threat intelligence databases, live on-chain metrics, 1-hop & 2-hop graph proximity scores, and 550B parameter AI synthesis.
-  - Scores wallets on a 0–100 reputation scale with clear risk categories:
-    - **`LOW RISK`** (80–100)
-    - **`MEDIUM RISK`** (55–79)
-    - **`HIGH RISK`** (30–54)
-    - **`CRITICAL RISK`** (0–29)
-
+### 2. 🧠 Explainable AI (XAI) Scoring & Risk Engine
+- **Deterministic & Real-Time Scoring (0–100 Scale)**:
+  - **`LOW RISK / TRUSTED`** (80–100): Established wallet age, high transaction volume, zero malicious counterparty interactions.
+  - **`CAUTION / MEDIUM RISK`** (55–79): Moderate activity, new or dormant address, or minor risk indicators.
+  - **`HIGH RISK`** (30–54): Unverified smart contract code, rapid fund velocity, or 2-hop proximity to flagged entities.
+  - **`CRITICAL RISK`** (0–29): Direct interaction with mixers (Tornado Cash), wallet drainers, phishing reports, or known scam registries.
+- **🛡️ Smart Contract Verification Check**:
+  - Queries Etherscan ABI API in real-time.
+  - Verified public smart contracts earn a **+12 trust boost**.
+  - Unverified contracts trigger an immediate **-20 risk penalty** and an alert banner.
+- **🦎 Live CoinGecko Market Valuation**:
+  - Live price feeds for BTC, ETH, SOL, ADA, DOT, XRP, and BNB.
+  - Automatically calculates real-time USD balances and transacted volumes using live market prices (with 5-minute memory caching).
+- **🕸️ Graph Risk & Proximity Index**:
+  - Calculates 1-hop and 2-hop counterparty proximity scores to known malicious clusters.
 - **🏷️ Likely Wallet Type Classification**:
-  - Predicts entity classifications with percentage distributions across 10+ categories:
-    `Exchange`, `Personal wallet`, `Whale`, `Mining wallet`, `Merchant`, `Bot`, `Payment processor`, `Dormant wallet`, `Mixer`, `Possible scam wallet`.
-
-- **💬 Interactive Natural Language AI Chat Assistant**:
-  - Built-in chat box available inside both the extension popup UI and the floating webpage hover card overlay.
-  - Ask natural language questions like:
-    - *"Is this wallet safe?"*
-    - *"Why is this wallet suspicious?"*
-    - *"Has this wallet interacted with any risky addresses?"*
-
-- **🔒 Manifest V3 & Security Standard Compliance**:
-  - Strictly adheres to Manifest V3 requirements.
-  - Read-only DOM node traversal using `textContent` and `createElement` DOM APIs (0 `innerHTML` XSS risks).
-  - Enforces encrypted `https://` protocols for all external API endpoints.
+  - Multi-class entity prediction breakdown: `Personal wallet`, `Exchange`, `Merchant`, `Whale`, `Mining pool`, `Payment processor`, `Bot`, `Mixer`, `Possible scam wallet`.
+- **🤖 Nvidia Nemotron AI Security Synthesis**:
+  - Translates complex on-chain metrics into plain English summaries with actionable security recommendations.
 
 ---
 
-## 🛠️ Project Structure
+### 3. 🗄️ Supabase Cloud Database Integration
+- **🚩 In-Popup Community Threat Reporting**:
+  - Users can flag malicious addresses (*Phishing*, *Wallet Drainer*, *Rug Pull*, *Impersonation*, *Other*) directly from the extension popup.
+  - Reports are stored in Supabase PostgreSQL (`public.reports`) with category, description, and timestamp.
+  - The scoring engine dynamically queries Supabase and penalizes flagged addresses in real time.
+- **📋 Persistent Watchlists**:
+  - `public.watchlists` table for bookmarking and monitoring critical wallet addresses.
+- **Enterprise Connection Pooling**:
+  - Built with PostgreSQL connection pooling (`pg.Pool`) via Supabase pooler with SSL encryption and graceful offline fallback.
+
+---
+
+### 4. 🎨 Redesigned Extension Popup UI (Dark Glassmorphism)
+- **Tabbed Organization**:
+  - **`📊 Score`**: Reputation dial, risk level, chain badge, entity classification bars, and 6-metric grid.
+  - **`🔍 Details`**: Smart contract verification pill, XAI trust and risk factors with custom non-clipping glassmorphism scrollbars, Nvidia AI synthesis card, and report form modal.
+  - **`💬 AI Chat`**: Interactive AI security consultant with quick preset question chips and scrollable response box.
+  - **`📋 History`**: Persistent local scan log stored in `chrome.storage.local` with one-click re-scanning and a clear button.
+- **6-Metric Mini Grid**:
+  - Displays **Wallet Age**, **Tx Count**, **Live Balance**, **Volume (USD)**, **Scam Reports**, and **Graph Risk**.
+- **Horizontal Quick-Chips Bar**:
+  - One-click testing for Vitalik.eth, Satoshi Genesis BTC, Solana, Cardano, Polkadot, and XRP without awkward text wrapping.
+- **Network Badges**:
+  - Color-coded network indicators: `ETH` (Blue), `BTC` (Gold), `SOL` (Purple), `ADA` (Cyan), `DOT` (Pink), `XRP` (Green).
+- **Zero-Clipping Guarantee**:
+  - Custom glassmorphism scrollbars (`::-webkit-scrollbar`), bounded max-heights, and `overflow-wrap: break-word` across all alert items.
+
+---
+
+### 5. 🌐 Floating Webpage Hover Card Overlay
+- Clicking any inline address badge on a webpage opens a floating dark-mode card.
+- Displays the score dial, chain badge, 6-metric grid, entity classification bars, trust factors, risk flags, and an embedded inline chat assistant.
+
+---
+
+### 6. 🦊 Cross-Browser Store Compatibility
+- Separate optimized builds for:
+  - **Google Chrome** (`ReputeX-Chrome-Extension.zip`)
+  - **Microsoft Edge** (`ReputeX-Edge-Extension.zip`)
+  - **Mozilla Firefox & Firefox Android** (`ReputeX-Firefox-Extension.zip`)
+  - **Opera** (`ReputeX-Opera-Extension.zip`)
+- Packaged with standard POSIX forward-slash archives to satisfy strict Chrome Web Store and Mozilla AMO automated validators.
+
+---
+
+## 📥 How to Install the Extension
+
+The extension connects out-of-the-box to the live hosted Vercel backend (`https://repute-x-iota.vercel.app/`). No local servers or Node.js required!
+
+### For Chrome, Edge, Brave, and Opera:
+1. Clone or download this repository:
+   ```bash
+   git clone https://github.com/Aru-D-Rizz/ReputeX.git
+   ```
+2. Navigate to your browser's extension page:
+   - Chrome: `chrome://extensions`
+   - Edge: `edge://extensions`
+   - Brave: `brave://extensions`
+   - Opera: `opera://extensions`
+3. Toggle **Developer mode** in the top-right corner.
+4. Click **Load unpacked** and select the **`extension`** folder from the repository.
+
+### For Mozilla Firefox:
+1. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`.
+2. Click **Load Temporary Add-on...**.
+3. Select `manifest.json` from the **`extension-firefox`** folder (or select `ReputeX-Firefox-Extension.zip`).
+
+---
+
+## 🧪 Test Environment & Demo Page
+
+Open the live Web3 test environment to see ReputeX detect and score multiple blockchains simultaneously:
+- **Live Demo**: **[https://repute-x-iota.vercel.app/demo/demo.html](https://repute-x-iota.vercel.app/demo/demo.html)**
+- Or open `demo/demo.html` locally in any browser with the extension installed.
+
+---
+
+## 🛠️ Project Architecture
 
 ```text
 ReputeX/
-├── index.html                         # Official Vercel landing page
-├── vercel.json                        # Vercel Serverless Function & CORS routing configuration
+├── index.html                               # Landing page
+├── vercel.json                              # Vercel serverless routing & CORS configuration
+├── scripts/
+│   └── build_posix_zips.py                  # Cross-browser POSIX packaging script
+├── supabase/
+│   ├── config.toml                          # Supabase configuration
+│   └── migrations/
+│       └── 20260903000000_init_reputex.sql  # Threat reports & watchlists PostgreSQL schema
 ├── backend/
-│   ├── data/
-│   │   └── scamDatabase.json          # Offline scam & verified entity registry
-│   ├── engine/
-│   │   └── xaiEngine.js               # OpenRouter Nvidia Nemotron 3 Ultra XAI engine & Q&A assistant
+│   ├── .env.example                         # Environment credentials template
+│   ├── server.js                            # Express API Server & routes
 │   ├── services/
-│   │   └── dataAggregator.js          # Live Etherscan V2 & Blockstream Esplora data fetcher
-│   └── server.js                      # Express API Server
-├── extension/
-│   ├── background/
-│   │   └── service_worker.js          # MV3 service worker, checksum validation & API router
+│   │   ├── dbService.js                     # Supabase pg.Pool client & queries
+│   │   └── dataAggregator.js                # CoinGecko, Etherscan ABI & Esplora data fetcher
+│   ├── engine/
+│   │   └── xaiEngine.js                     # Multi-factor scoring engine & Nemotron AI consultant
+│   └── data/
+│       └── scamDatabase.json                # Local threat registry & known safe entities
+├── extension/                               # Chromium extension build (Chrome, Edge, Opera, Brave)
+│   ├── manifest.json                        # Manifest V3 configuration (v2.0.0)
+│   ├── background/service_worker.js         # Background worker, cache & API router
 │   ├── content/
-│   │   ├── content.js                 # Read-only page scanner & hover overlay card builder
-│   │   └── content.css                # High-visibility inline address pill & overlay card styles
-│   ├── icons/                         # Extension toolbar PNG icons (16x16, 48x48, 128x128)
+│   │   ├── content.js                       # Read-only DOM scanner & hover overlay builder
+│   │   └── content.css                      # Inline badges & hover card styles
 │   ├── popup/
-│   │   ├── popup.html                 # Extension popup interface
-│   │   ├── popup.js                   # Popup logic, wallet list & AI chatbox controller
-│   │   └── popup.css                  # Dark glassmorphism popup styling
-│   └── manifest.json                  # Manifest V3 extension configuration
+│   │   ├── popup.html                       # Tabbed popup interface
+│   │   ├── popup.js                         # Tab switching, history, search & report controller
+│   │   └── popup.css                        # Glassmorphism dark theme styling
+│   └── icons/                               # Application icons (16, 48, 128px)
+├── extension-firefox/                       # Mozilla Firefox build (Gecko & Gecko Android)
+│   └── manifest.json                        # Firefox MV3 manifest with gecko ID & data permissions
 └── demo/
-    └── demo.html                      # Web3 test environment (Etherscan, BTC, Twitter, OpenSea)
+    └── demo.html                            # Web3 multi-chain test page
 ```
-
----
-
-## ⚙️ Optional Local Backend Setup (For Developers)
-
-If you wish to run the API backend locally on your own machine instead of using the hosted Vercel API:
-
-```bash
-# 1. Navigate to backend folder & install dependencies
-cd backend
-npm install
-
-# 2. Configure .env credentials (or copy from .env.example)
-cp .env.example .env
-
-# 3. Start local API server on Port 5000
-node server.js
-```
-The local server starts running on `http://localhost:5000`:
-- **Health Check**: `GET http://localhost:5000/health`
-- **Single Wallet Analysis**: `POST http://localhost:5000/api/reputation/analyze`
-- **Natural Language Q&A Chat**: `POST http://localhost:5000/api/reputation/chat`
 
 ---
 
 ## 📡 API Reference
 
-### 1. Analyze Wallet Reputation
-**`POST /api/reputation/analyze`**
-```json
-// Request Body
-{
-  "address": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
-}
+Base Production URL: `https://repute-x-iota.vercel.app/api/reputation`
 
-// Response
-{
-  "address": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-  "score": 100,
-  "riskCategory": "LOW",
-  "riskLevel": "TRUSTED",
-  "ens": "vitalik.eth",
-  "classification": [
-    { "type": "Whale", "pct": 35 },
-    { "type": "Exchange", "pct": 27 },
-    { "type": "Payment processor", "pct": 14 },
-    { "type": "Other", "pct": 24 }
-  ],
-  "metrics": {
-    "walletAgeDays": 1450,
-    "totalTxCount": 8420,
-    "scamReportCount": 0,
-    "maliciousProximityScore": 0
-  },
-  "explanation": {
-    "positiveFactors": [...],
-    "negativeFactors": [...],
-    "aiSynthesis": {
-      "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
-      "provider": "Nvidia Nemotron 3 Ultra (via OpenRouter)",
-      "summary": "Wallet age of 1450 days and 8420 transactions indicate a trusted profile.",
-      "recommendation": "Always inspect contract parameters prior to signing."
-    }
-  }
-}
-```
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/health` | Server status and health check |
+| `POST` | `/api/reputation/analyze` | Complete multi-chain analysis for a single address |
+| `POST` | `/api/reputation/batch` | High-speed batch reputation scan for multiple addresses |
+| `POST` | `/api/reputation/chat` | Contextual Q&A conversation with Nemotron AI consultant |
+| `GET` | `/api/reputation/prices` | Cached real-time crypto prices from CoinGecko |
+| `POST` | `/api/reputation/report` | Submit community threat report directly to Supabase DB |
+| `GET` | `/api/reputation/reports/:address` | Fetch existing community threat reports for an address |
+| `POST` | `/api/reputation/watchlist` | Add an address to user watchlist |
+| `GET` | `/api/reputation/watchlist/:clientId` | Retrieve saved watchlist for a client |
+| `DELETE` | `/api/reputation/watchlist/:id` | Remove an address from watchlist |
 
-### 2. Natural Language AI Chat Assistant
-**`POST /api/reputation/chat`**
-```json
-// Request Body
-{
-  "address": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-  "question": "Is this wallet safe?"
-}
-
-// Response
-{
-  "address": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-  "question": "Is this wallet safe?",
-  "answer": "Yes, this wallet is exceptionally safe. It holds a perfect 100/100 reputation score with a LOW risk classification, zero risky counterparties, and a 0/100 malicious proximity index across both 1-hop and 2-hop connections.",
-  "score": 100,
-  "riskCategory": "LOW"
-}
+### Example Analysis Payload:
+```bash
+curl -X POST https://repute-x-iota.vercel.app/api/reputation/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"address": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"}'
 ```
 
 ---
 
-## 🔒 Security & Privacy
+## 🔒 Security & Privacy Commitments
 
-- **No Private Key Access**: ReputeX only reads public wallet addresses displayed on web pages.
-- **Read-Only Scanner**: Uses safe DOM text node extraction without modifying page behavior or injecting unverified scripts.
-- **Cryptographic Validation**: Validates EVM EIP-55, Bitcoin Bech32/P2SH, and Solana Base58 checksum formats to prevent false positive lookups.
+- **No Private Keys**: ReputeX never requests or accesses private keys, seed phrases, or wallet signatures.
+- **Zero Injections**: Content scripts operate in isolated worlds and never inject external third-party `<script>` tags.
+- **Safe DOM APIs**: Exclusively uses `textContent` and `createElement` DOM operations to eliminate Cross-Site Scripting (XSS).
+- **Encrypted Communication**: All external requests are performed over TLS/HTTPS.
 
 ---
 
 ## 📄 License
-Distributed under the **MIT License**. See `LICENSE` for more information.
+Distributed under the **MIT License**. See `LICENSE` for details.
