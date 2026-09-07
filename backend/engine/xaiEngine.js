@@ -1,4 +1,5 @@
 const path = require('path');
+const crypto = require('crypto');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
@@ -269,49 +270,128 @@ System Guidelines:
 }
 
 /**
- * ReputeX Explainable AI (XAI) Reputation Engine
+ * ReputeX Explainable AI (XAI) Continuous Reputation Engine
+ * Uses continuous logarithmic, square-root curves, volume/balance weighting,
+ * and deterministic cryptographic entropy to produce unique, granular scores.
  */
 async function calculateReputation(metrics) {
-  let baseScore = 70;
+  let runningScore = 35.0;
   const positiveFactors = [];
   const negativeFactors = [];
 
   const classification = classifyWalletType(metrics);
 
-  if (metrics.scamReportCount > 0) {
-    const penalty = Math.min(60, metrics.scamReportCount * 12);
-    baseScore -= penalty;
+  // 1. Continuous Wallet Age Curve (Up to 15 pts via square-root decay)
+  const ageDays = Math.max(0, metrics.walletAgeDays || 0);
+  if (ageDays >= 7) {
+    const ageScore = Math.min(15, Math.sqrt(ageDays / 1825) * 15);
+    runningScore += ageScore;
+    if (ageDays >= 180) {
+      positiveFactors.push({
+        code: "ESTABLISHED_WALLET_AGE",
+        title: "Established Wallet History",
+        description: `Active on-chain for ${ageDays} days (~${(ageDays / 365).toFixed(1)} years) [adds +${ageScore.toFixed(1)} pts].`,
+        weight: ageDays > 730 ? "HIGH" : "MEDIUM"
+      });
+    }
+  } else {
+    const agePenalty = Math.max(5, 14 - ageDays * 1.5);
+    runningScore -= agePenalty;
     negativeFactors.push({
-      code: "SCAM_REPORTS_DETECTED",
-      title: "Scam / Phishing Reports Flagged",
-      description: `Wallet has ${metrics.scamReportCount} community scam or phishing report(s) in active databases.`,
-      severity: "CRITICAL"
-    });
-  }
-
-  if (metrics.knownThreat) {
-    baseScore -= 30;
-    negativeFactors.push({
-      code: "KNOWN_THREAT_SIGNATURE",
-      title: "Known Threat Pattern",
-      description: metrics.knownThreat,
+      code: "NEWLY_CREATED_WALLET",
+      title: "Newly Created Wallet (<7 Days)",
+      description: `Wallet created only ${ageDays} day(s) ago. Elevated risk of temporary disposable address.`,
       severity: "HIGH"
     });
   }
 
-  if (metrics.maliciousProximityScore > 50) {
-    const penalty = Math.round((metrics.maliciousProximityScore - 50) * 0.7);
-    baseScore -= penalty;
+  // 2. Continuous Transaction Depth Curve (Up to 14 pts via log scaling)
+  const txCount = Math.max(0, metrics.totalTxCount || 0);
+  if (txCount >= 5) {
+    const txScore = Math.min(14, (Math.log(1 + txCount) / Math.log(1 + 5000)) * 14);
+    runningScore += txScore;
+    if (txCount >= 20) {
+      positiveFactors.push({
+        code: "PROVEN_TX_HISTORY",
+        title: "Proven Transaction Activity",
+        description: `Recorded ${txCount} historical on-chain transactions across ${metrics.uniqueCounterparties || 1} peer(s) [adds +${txScore.toFixed(1)} pts].`,
+        weight: txCount > 200 ? "HIGH" : "MEDIUM"
+      });
+    }
+  } else if (!metrics.verifiedLabel) {
+    const txPenalty = Math.max(3, 10 - txCount * 1.8);
+    runningScore -= txPenalty;
     negativeFactors.push({
-      code: "HIGH_MALICIOUS_PROXIMITY",
-      title: "Graph Risk: Direct Link to Malicious Nodes",
-      description: `High proximity index (${metrics.maliciousProximityScore}/100) to known drainer or mixer nodes.`,
-      severity: metrics.maliciousProximityScore > 75 ? "HIGH" : "MEDIUM"
+      code: "MINIMAL_ONCHAIN_HISTORY",
+      title: "Sparse On-Chain Proof-of-Work",
+      description: `Only ${txCount} transaction(s) recorded. Low historical proof-of-work.`,
+      severity: "MEDIUM"
     });
   }
 
+  // 3. Economic Capital Commitment: Volume Curve (Up to 10 pts via log10)
+  const volumeUSD = Math.max(0, parseFloat(metrics.totalVolumeUSD || 0));
+  if (volumeUSD > 10) {
+    const volScore = Math.min(10, (Math.log10(1 + volumeUSD) / 6) * 10);
+    runningScore += volScore;
+    if (volumeUSD >= 500) {
+      positiveFactors.push({
+        code: "SIGNIFICANT_VOLUME",
+        title: "Economic Commitment (Volume)",
+        description: `Transacted $${volumeUSD.toLocaleString()} total historical USD volume [adds +${volScore.toFixed(1)} pts].`,
+        weight: volumeUSD > 25000 ? "HIGH" : "MEDIUM"
+      });
+    }
+  }
+
+  // 4. Economic Capital Commitment: Current Balance Curve (Up to 6 pts)
+  let balanceUSD = 0;
+  if (metrics.currentBalanceETH) balanceUSD = metrics.currentBalanceETH * 2400;
+  else if (metrics.currentBalanceBTC) balanceUSD = metrics.currentBalanceBTC * 77000;
+  else if (metrics.currentBalanceSOL) balanceUSD = metrics.currentBalanceSOL * 135;
+  else if (metrics.currentBalanceADA) balanceUSD = metrics.currentBalanceADA * 0.35;
+  else if (metrics.currentBalanceXRP) balanceUSD = metrics.currentBalanceXRP * 0.55;
+  else if (metrics.currentBalanceDOT) balanceUSD = metrics.currentBalanceDOT * 4.2;
+  else if (metrics.currentBalance && typeof metrics.currentBalance === 'string') {
+    const match = metrics.currentBalance.match(/([0-9.]+)/);
+    if (match) balanceUSD = parseFloat(match[1]) * 100;
+  }
+  if (balanceUSD > 5) {
+    const balScore = Math.min(6, (Math.log10(1 + balanceUSD) / 4.5) * 6);
+    runningScore += balScore;
+  }
+
+  // 5. Counterparty Diversity Index (Up to 8 pts)
+  const uniquePeers = Math.max(1, metrics.uniqueCounterparties || 1);
+  if (uniquePeers >= 3) {
+    const divScore = Math.min(8, Math.pow(uniquePeers, 0.36) * 1.5);
+    runningScore += divScore;
+    if (uniquePeers >= 15) {
+      positiveFactors.push({
+        code: "DIVERSE_COUNTERPARTIES",
+        title: "Network Peer Diversity",
+        description: `Connected to ${uniquePeers} distinct counterparty addresses [adds +${divScore.toFixed(1)} pts].`,
+        weight: "MEDIUM"
+      });
+    }
+  }
+
+  // 6. Verified Protocol Interactions (Up to 12 pts via log2)
+  const protoList = metrics.protocolInteractions || [];
+  if (protoList.length > 0) {
+    const protoScore = Math.min(12, Math.log2(1 + protoList.length) * 4.2);
+    runningScore += protoScore;
+    positiveFactors.push({
+      code: "TRUSTED_PROTOCOL_INTERACTIONS",
+      title: "Blue-Chip Protocol Interactions",
+      description: `Interacted with ${protoList.length} verified protocol(s): ${protoList.slice(0, 4).join(', ')}${protoList.length > 4 ? '...' : ''} [adds +${protoScore.toFixed(1)} pts].`,
+      weight: "HIGH"
+    });
+  }
+
+  // 7. Identity & Contract Verification Signals
   if (metrics.verifiedLabel) {
-    baseScore += 25;
+    runningScore += 16;
     positiveFactors.push({
       code: "VERIFIED_ENTITY",
       title: "Verified Entity",
@@ -321,7 +401,7 @@ async function calculateReputation(metrics) {
   }
 
   if (metrics.ens) {
-    baseScore += 12;
+    runningScore += 8;
     positiveFactors.push({
       code: "ENS_IDENTITY_RESOLVED",
       title: "Verified ENS Name",
@@ -330,57 +410,9 @@ async function calculateReputation(metrics) {
     });
   }
 
-  if (metrics.walletAgeDays >= 365) {
-    const boost = Math.min(15, Math.floor(metrics.walletAgeDays / 365) * 5);
-    baseScore += boost;
-    positiveFactors.push({
-      code: "ESTABLISHED_WALLET_AGE",
-      title: "Established Wallet History",
-      description: `Active on-chain for ${metrics.walletAgeDays} days (${(metrics.walletAgeDays / 365).toFixed(1)} years).`,
-      weight: "MEDIUM"
-    });
-  } else if (metrics.walletAgeDays < 14) {
-    baseScore -= 20;
-    negativeFactors.push({
-      code: "NEWLY_CREATED_WALLET",
-      title: "Newly Created Wallet (<14 Days)",
-      description: `Wallet created only ${metrics.walletAgeDays} days ago. High risk of throwaway drainer address.`,
-      severity: "HIGH"
-    });
-  }
-
-  if (metrics.totalTxCount > 100) {
-    baseScore += 10;
-    positiveFactors.push({
-      code: "HIGH_TX_VOLUME",
-      title: "Active On-Chain Record",
-      description: `Executed ${metrics.totalTxCount} on-chain transactions across ${metrics.uniqueCounterparties || 1} unique counterparties.`,
-      weight: "MEDIUM"
-    });
-  } else if (metrics.totalTxCount < 5 && !metrics.verifiedLabel) {
-    baseScore -= 12;
-    negativeFactors.push({
-      code: "LOW_TX_COUNT",
-      title: "Minimal On-Chain Activity",
-      description: `Only ${metrics.totalTxCount} transaction(s) recorded. Low historical proof of work.`,
-      severity: "MEDIUM"
-    });
-  }
-
-  if (metrics.protocolInteractions && metrics.protocolInteractions.length > 0) {
-    baseScore += Math.min(15, metrics.protocolInteractions.length * 4);
-    positiveFactors.push({
-      code: "TRUSTED_PROTOCOL_INTERACTIONS",
-      title: "Blue-Chip DeFi / NFT Interactions",
-      description: `Interacted with verified protocols: ${metrics.protocolInteractions.join(', ')}.`,
-      weight: "HIGH"
-    });
-  }
-
-  // Smart Contract Verification Check
   if (metrics.isContract) {
     if (metrics.isVerifiedContract) {
-      baseScore += 12;
+      runningScore += 10;
       positiveFactors.push({
         code: "VERIFIED_SMART_CONTRACT",
         title: "Verified Contract Source Code",
@@ -388,7 +420,7 @@ async function calculateReputation(metrics) {
         weight: "HIGH"
       });
     } else {
-      baseScore -= 20;
+      runningScore -= 22;
       negativeFactors.push({
         code: "UNVERIFIED_SMART_CONTRACT",
         title: "Unverified Contract Code",
@@ -398,7 +430,40 @@ async function calculateReputation(metrics) {
     }
   }
 
-  // Community Threat Reports Flag
+  // 8. Negative Penalties (Scams, Known Threats, Graph Proximity)
+  if (metrics.scamReportCount > 0) {
+    const scamPenalty = Math.min(65, 14 + (metrics.scamReportCount * 11));
+    runningScore -= scamPenalty;
+    negativeFactors.push({
+      code: "SCAM_REPORTS_DETECTED",
+      title: "Scam / Phishing Reports Flagged",
+      description: `Wallet has ${metrics.scamReportCount} community scam or phishing report(s) in active databases.`,
+      severity: "CRITICAL"
+    });
+  }
+
+  if (metrics.knownThreat) {
+    runningScore -= 32;
+    negativeFactors.push({
+      code: "KNOWN_THREAT_SIGNATURE",
+      title: "Known Threat Pattern",
+      description: metrics.knownThreat,
+      severity: "HIGH"
+    });
+  }
+
+  if (metrics.maliciousProximityScore > 25) {
+    const proxPenalty = Math.min(40, (metrics.maliciousProximityScore - 25) * 0.55);
+    runningScore -= proxPenalty;
+    negativeFactors.push({
+      code: "HIGH_MALICIOUS_PROXIMITY",
+      title: "Graph Risk: Direct Link to Malicious Nodes",
+      description: `Proximity index of ${metrics.maliciousProximityScore}/100 to known drainer or mixer nodes.`,
+      severity: metrics.maliciousProximityScore > 70 ? "HIGH" : "MEDIUM"
+    });
+  }
+
+  // 9. Community Threat Reports Flag
   if (metrics.communityReportCount && metrics.communityReportCount > 0) {
     negativeFactors.push({
       code: "COMMUNITY_THREAT_REPORTS",
@@ -408,7 +473,14 @@ async function calculateReputation(metrics) {
     });
   }
 
-  const finalScore = Math.max(0, Math.min(100, Math.round(baseScore)));
+  // 10. Cryptographic Micro-Entropy Dispersion (±2.0 pts)
+  // Ensures two otherwise identical profiles still reflect fine-grained uniqueness
+  const rawHash = crypto.createHash('sha256').update((metrics.address || '').toLowerCase()).digest('hex');
+  const seedInt = parseInt(rawHash.substring(0, 6), 16) % 1000;
+  const entropyDelta = parseFloat(((seedInt / 999) * 4.0 - 2.0).toFixed(2));
+  runningScore += entropyDelta;
+
+  const finalScore = Math.max(0, Math.min(100, Math.round(runningScore)));
 
   let riskCategory = "MEDIUM";
   let riskLevel = "CAUTION";
