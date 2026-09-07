@@ -424,16 +424,17 @@
     const metricsGrid = document.createElement('div');
     metricsGrid.className = 'reputex-metrics-grid';
 
-    const balanceVal = data.currentBalance || data.metrics.currentBalance || (data.metrics.currentBalanceETH ? `${data.metrics.currentBalanceETH} ETH` : '--');
-    const volumeVal = data.metrics.totalVolumeUSD ? `$${Number(data.metrics.totalVolumeUSD).toLocaleString()}` : '--';
+    const m = data.metrics || {};
+    const balanceVal = data.currentBalance || m.currentBalance || (m.currentBalanceETH ? `${m.currentBalanceETH} ETH` : '--');
+    const volumeVal = m.totalVolumeUSD ? `$${Number(m.totalVolumeUSD).toLocaleString()}` : '--';
 
     const metricsData = [
-      { label: 'Wallet Age', value: `${data.metrics.walletAgeDays} Days` },
-      { label: 'Tx Count', value: `${data.metrics.totalTxCount} Txs` },
+      { label: 'Wallet Age', value: `${m.walletAgeDays || 0} Days` },
+      { label: 'Tx Count', value: `${m.totalTxCount || 0} Txs` },
       { label: 'Balance', value: balanceVal },
       { label: 'Volume (USD)', value: volumeVal },
-      { label: 'Scam Reports', value: `${data.metrics.scamReportCount} Reports`, color: data.metrics.scamReportCount > 0 ? '#f87171' : '#34d399' },
-      { label: 'Graph Risk', value: `${data.metrics.maliciousProximityScore}/100` }
+      { label: 'Scam Reports', value: `${m.scamReportCount || 0} Reports`, color: (m.scamReportCount || 0) > 0 ? '#f87171' : '#34d399' },
+      { label: 'Graph Risk', value: `${m.maliciousProximityScore || 0}/100` }
     ];
 
     metricsData.forEach(m => {

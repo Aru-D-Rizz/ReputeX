@@ -287,6 +287,8 @@ async function fetchReputationBatch(addresses) {
     }
     throw err;
   }
+}
+
 async function submitThreatReport(address, chain, category, description) {
   const primaryUrl = await getApiBaseUrl();
   const urls = [

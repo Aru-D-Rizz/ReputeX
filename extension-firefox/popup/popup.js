@@ -366,7 +366,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const shortAddr = data.address.length > 20 ? `${data.address.substring(0, 8)}...${data.address.substring(data.address.length - 6)}` : data.address;
     fullAddr.textContent = shortAddr;
-    ensTag.textContent = data.ens ? `🏷️ ${data.ens}` : (data.metrics.verifiedLabel ? `🏷️ ${data.metrics.verifiedLabel}` : '');
+
+    const m = data.metrics || {};
+    ensTag.textContent = data.ens ? `🏷️ ${data.ens}` : (m.verifiedLabel ? `🏷️ ${m.verifiedLabel}` : '');
 
     renderClassificationBars(data.classification || [
       { type: "Personal wallet", pct: 60 },
@@ -376,18 +378,18 @@ document.addEventListener('DOMContentLoaded', () => {
     ]);
 
     // 6 Metrics
-    miniAge.textContent = `${data.metrics.walletAgeDays} d`;
-    miniTxs.textContent = `${data.metrics.totalTxCount}`;
-    miniBalance.textContent = data.currentBalance || data.metrics.currentBalance || (data.metrics.currentBalanceETH ? `${data.metrics.currentBalanceETH} ETH` : '--');
-    miniVolume.textContent = data.metrics.totalVolumeUSD ? `$${data.metrics.totalVolumeUSD.toLocaleString()}` : '--';
-    miniReports.textContent = `${data.metrics.scamReportCount || 0}`;
-    miniReports.style.color = (data.metrics.scamReportCount > 0) ? '#f87171' : '#34d399';
-    miniGraph.textContent = `${data.metrics.maliciousProximityScore || 0}/100`;
+    miniAge.textContent = `${m.walletAgeDays || 0} d`;
+    miniTxs.textContent = `${m.totalTxCount || 0}`;
+    miniBalance.textContent = data.currentBalance || m.currentBalance || (m.currentBalanceETH ? `${m.currentBalanceETH} ETH` : '--');
+    miniVolume.textContent = m.totalVolumeUSD ? `$${m.totalVolumeUSD.toLocaleString()}` : '--';
+    miniReports.textContent = `${m.scamReportCount || 0}`;
+    miniReports.style.color = ((m.scamReportCount || 0) > 0) ? '#f87171' : '#34d399';
+    miniGraph.textContent = `${m.maliciousProximityScore || 0}/100`;
 
     // Contract Verification Pill
-    if (data.isContract || data.metrics.isContract) {
+    if (data.isContract || m.isContract) {
       contractContainer.classList.remove('hidden');
-      if (data.isVerifiedContract || data.metrics.isVerifiedContract) {
+      if (data.isVerifiedContract || m.isVerifiedContract) {
         contractPill.className = 'contract-status-pill verified';
         contractPill.textContent = '🛡️ Contract Source Code Verified';
       } else {
@@ -401,8 +403,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Factors List
     factorList.textContent = '';
 
-    if (data.explanation && data.explanation.aiSynthesis) {
-      const ai = data.explanation.aiSynthesis;
+    const exp = data.explanation || {};
+    if (exp.aiSynthesis) {
+      const ai = exp.aiSynthesis;
       const aiItem = document.createElement('div');
       aiItem.className = 'f-item';
       aiItem.style.background = 'linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2))';
@@ -430,8 +433,8 @@ document.addEventListener('DOMContentLoaded', () => {
       factorList.appendChild(aiItem);
     }
 
-    if (data.explanation.positiveFactors) {
-      data.explanation.positiveFactors.forEach(f => {
+    if (exp.positiveFactors && Array.isArray(exp.positiveFactors)) {
+      exp.positiveFactors.forEach(f => {
         const item = document.createElement('div');
         item.className = 'f-item pos';
         item.textContent = `✅ ${f.title}: ${f.description}`;
@@ -439,8 +442,8 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    if (data.explanation.negativeFactors) {
-      data.explanation.negativeFactors.forEach(f => {
+    if (exp.negativeFactors && Array.isArray(exp.negativeFactors)) {
+      exp.negativeFactors.forEach(f => {
         const item = document.createElement('div');
         item.className = 'f-item neg';
         item.textContent = `🚨 ${f.title}: ${f.description}`;
