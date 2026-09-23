@@ -182,6 +182,29 @@
       </div>
     </div>
 
+    <!-- Pre-Sign Transaction Simulation Test Suite (ReputeX v3) -->
+    <div class="platform-card" style="grid-column: 1 / -1; border-color: #f59e0b;">
+      <span class="platform-tag" style="background: rgba(245, 158, 11, 0.2); color: #fbbf24;">ReputeX v3 Pre-Sign Simulation Test Suite</span>
+      <h3 style="margin-bottom: 8px; font-size:16px;">Test Pre-Sign Transaction Interception & Simulation</h3>
+      <p style="font-size: 12px; color: #94a3b8; margin-bottom: 14px;">
+        Click any button below to trigger a Web3 provider signing request (`window.ethereum.request`). ReputeX will intercept the call, run the simulation engine, and display the Pre-Sign Security Preview Overlay before delegating to your wallet.
+      </p>
+
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button id="btn-test-unlimited-approve" style="background: #ef4444; color: white; border: none; padding: 10px 14px; border-radius: 8px; font-weight: 700; cursor: pointer;">
+          🚨 Trigger Unlimited Token Approval
+        </button>
+        <button id="btn-test-nft-approval" style="background: #f59e0b; color: white; border: none; padding: 10px 14px; border-radius: 8px; font-weight: 700; cursor: pointer;">
+          ⚠️ Trigger NFT SetApprovalForAll
+        </button>
+        <button id="btn-test-personal-sign" style="background: #10b981; color: white; border: none; padding: 10px 14px; border-radius: 8px; font-weight: 700; cursor: pointer;">
+          ✍️ Trigger Personal Sign Request
+        </button>
+      </div>
+
+      <div id="sim-test-result" style="margin-top: 12px; font-family: monospace; font-size: 11px; color: #a7f3d0;"></div>
+    </div>
+
     <!-- BNB Chain Platform -->
     <div class="platform-card">
       <span class="platform-tag tag-bnb">BNB Chain (BSC EVM)</span>
@@ -195,6 +218,69 @@
     </div>
 
   </div>
+
+  <script>
+    // Ensure window.ethereum exists or inject dummy provider if no MetaMask installed
+    if (!window.ethereum) {
+      window.ethereum = {
+        isMetaMask: true,
+        request: async function(args) {
+          console.log('[Demo Dummy Provider] Executed:', args);
+          return '0x' + Array(64).fill('0').join('');
+        }
+      };
+    }
+
+    document.getElementById('btn-test-unlimited-approve').onclick = async () => {
+      const resBox = document.getElementById('sim-test-result');
+      resBox.textContent = 'Triggering Unlimited Token Approval (0x095ea7b3)... Watch for ReputeX Overlay!';
+      try {
+        const txHash = await window.ethereum.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+            to: '0x0000000000000000000000000000000000000001',
+            data: '0x095ea7b30000000000000000000000001111111111111111111111111111111111111111ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
+          }]
+        });
+        resBox.textContent = '✅ Transaction Proceeded! Hash / Result: ' + JSON.stringify(txHash);
+      } catch (err) {
+        resBox.textContent = '❌ Transaction Rejected / Cancelled: ' + err.message;
+      }
+    };
+
+    document.getElementById('btn-test-nft-approval').onclick = async () => {
+      const resBox = document.getElementById('sim-test-result');
+      resBox.textContent = 'Triggering NFT Collection Approval (0xa22cb465)... Watch for ReputeX Overlay!';
+      try {
+        const txHash = await window.ethereum.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045',
+            to: '0x2222222222222222222222222222222222222222',
+            data: '0xa22cb46500000000000000000000000033333333333333333333333333333333333333330000000000000000000000000000000000000000000000000000000000000001'
+          }]
+        });
+        resBox.textContent = '✅ Transaction Proceeded! Hash / Result: ' + JSON.stringify(txHash);
+      } catch (err) {
+        resBox.textContent = '❌ Transaction Rejected / Cancelled: ' + err.message;
+      }
+    };
+
+    document.getElementById('btn-test-personal-sign').onclick = async () => {
+      const resBox = document.getElementById('sim-test-result');
+      resBox.textContent = 'Triggering Personal Sign Request... Watch for ReputeX Overlay!';
+      try {
+        const sig = await window.ethereum.request({
+          method: 'personal_sign',
+          params: ['Verify wallet ownership for ReputeX Test Suite', '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045']
+        });
+        resBox.textContent = '✅ Signature Proceeded! Result: ' + JSON.stringify(sig);
+      } catch (err) {
+        resBox.textContent = '❌ Signature Rejected / Cancelled: ' + err.message;
+      }
+    };
+  </script>
 
 </body>
 </html>
