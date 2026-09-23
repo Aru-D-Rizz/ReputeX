@@ -530,3 +530,201 @@
   font-size: 10px;
   color: #64748b;
 }
+
+/* ==========================================
+ * ReputeX v3 Pre-Sign Security Preview Modal
+ * ========================================== */
+.reputex-presign-backdrop {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(11, 15, 23, 0.85) !important;
+  backdrop-filter: blur(8px) !important;
+  z-index: 2147483647 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+.reputex-presign-modal {
+  width: 440px !important;
+  max-width: 90vw !important;
+  background: #161f2e !important;
+  border-radius: 14px !important;
+  padding: 20px !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8) !important;
+  color: #f8fafc !important;
+  box-sizing: border-box !important;
+}
+
+.reputex-border-critical {
+  border: 2px solid #ef4444 !important;
+  animation: reputexPulseRed 2s infinite !important;
+}
+
+.reputex-border-normal {
+  border: 2px solid #f59e0b !important;
+}
+
+@keyframes reputexPulseRed {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.reputex-presign-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 12px !important;
+}
+
+.reputex-presign-title {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: #f59e0b !important;
+}
+
+.reputex-presign-badge {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  padding: 3px 8px !important;
+  border-radius: 6px !important;
+  text-transform: uppercase !important;
+}
+
+.reputex-badge-alert {
+  background: rgba(239, 68, 68, 0.2) !important;
+  color: #ef4444 !important;
+  border: 1px solid #ef4444 !important;
+}
+
+.reputex-badge-safe {
+  background: rgba(16, 185, 129, 0.2) !important;
+  color: #10b981 !important;
+  border: 1px solid #10b981 !important;
+}
+
+.reputex-presign-counterparty {
+  font-size: 11px !important;
+  color: #94a3b8 !important;
+  background: rgba(30, 41, 59, 0.5) !important;
+  padding: 8px 10px !important;
+  border-radius: 8px !important;
+  margin-bottom: 12px !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+.reputex-score-tag {
+  color: #10b981 !important;
+  font-weight: 700 !important;
+}
+
+.reputex-presign-section-title {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #cbd5e1 !important;
+  margin: 12px 0 6px 0 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+.reputex-presign-warnings {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+  max-height: 120px !important;
+  overflow-y: auto !important;
+}
+
+.reputex-sim-warning-item {
+  font-size: 11px !important;
+  line-height: 1.4 !important;
+  padding: 8px 10px !important;
+  border-radius: 8px !important;
+  word-break: break-word !important;
+}
+
+.reputex-warn-critical {
+  background: rgba(239, 68, 68, 0.15) !important;
+  border-left: 3px solid #ef4444 !important;
+  color: #fca5a5 !important;
+}
+
+.reputex-warn-high {
+  background: rgba(245, 158, 11, 0.15) !important;
+  border-left: 3px solid #f59e0b !important;
+  color: #fde68a !important;
+}
+
+.reputex-warn-safe {
+  background: rgba(16, 185, 129, 0.15) !important;
+  border-left: 3px solid #10b981 !important;
+  color: #a7f3d0 !important;
+}
+
+.reputex-presign-assets {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+}
+
+.reputex-asset-change-pill {
+  font-size: 11px !important;
+  padding: 5px 8px !important;
+  border-radius: 6px !important;
+  background: rgba(30, 41, 59, 0.8) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  display: flex !important;
+  gap: 6px !important;
+}
+
+.reputex-asset-dir {
+  font-weight: 700 !important;
+  color: #ef4444 !important;
+}
+
+.reputex-asset-val {
+  color: #f8fafc !important;
+}
+
+.reputex-presign-actions {
+  display: flex !important;
+  gap: 10px !important;
+  margin-top: 16px !important;
+}
+
+.reputex-btn-reject {
+  flex: 1 !important;
+  background: #ef4444 !important;
+  color: #fff !important;
+  border: none !important;
+  padding: 10px !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: opacity 0.2s !important;
+}
+
+.reputex-btn-proceed {
+  flex: 1 !important;
+  background: #10b981 !important;
+  color: #fff !important;
+  border: none !important;
+  padding: 10px !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: opacity 0.2s !important;
+}
+
+.reputex-btn-reject:hover, .reputex-btn-proceed:hover {
+  opacity: 0.9 !important;
+}

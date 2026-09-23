@@ -41,3 +41,9 @@ if __name__ == "__main__":
     create_posix_zip(ext_dir, os.path.join(project_root, "ReputeX-Chrome-Extension-v2.1.zip"))
     create_posix_zip(ext_dir, os.path.join(project_root, "ReputeX-Opera-Extension-v2.1.zip"))
     create_posix_zip(firefox_dir, os.path.join(project_root, "ReputeX-Firefox-Extension-v2.1.zip"))
+
+    # Version 3.0 specific release packages
+    create_posix_zip(ext_dir, os.path.join(project_root, "ReputeX-Edge-Extension-v3.zip"))
+    create_posix_zip(ext_dir, os.path.join(project_root, "ReputeX-Chrome-Extension-v3.zip"))
+    create_posix_zip(ext_dir, os.path.join(project_root, "ReputeX-Opera-Extension-v3.zip"))
+    create_posix_zip(firefox_dir, os.path.join(project_root, "ReputeX-Firefox-Extension-v3.zip"))

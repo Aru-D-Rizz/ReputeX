@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "ReputeX: Web3 Wallet Reputation Overlay",
-  "version": "2.1.0",
-  "description": "Real-time, explainable AI reputation overlay & risk assessment for EVM, Bitcoin, Solana, Cardano, Polkadot, and XRP wallet addresses.",
+  "version": "3.0.0",
+  "description": "Real-time explainable AI reputation overlay, pre-sign transaction simulation & 2D/3D counterparty network graph for Web3 addresses.",
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
@@ -27,6 +27,12 @@
   ],
   "host_permissions": [
     "https://*/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["injected/injected.js", "lib/vis-network.min.js"],
+      "matches": ["<all_urls>"]
+    }
   ],
   "background": {
     "scripts": ["background/service_worker.js"]

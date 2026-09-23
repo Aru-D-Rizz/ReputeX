@@ -954,3 +954,48 @@ input:checked + .slider:before {
   70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
   100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
+
+/* ==========================================
+ * ReputeX v3 Network Graph Tab Styles
+ * ========================================== */
+.graph-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.graph-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.graph-canvas-container {
+  width: 100%;
+  height: 220px;
+  background: rgba(11, 15, 23, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+.graph-canvas-container canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.graph-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.graph-status {
+  font-size: 9.5px;
+  color: #10b981;
+  font-weight: 600;
+}

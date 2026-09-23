@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const { fetchWalletMetrics, getLiveCryptoPrices } = require('./services/dataAggregator');
 const { calculateReputation, answerWalletQuestion } = require('./engine/xaiEngine');
+const { simulateTransaction } = require('./engine/simulationEngine');
+const { generateCounterpartyGraph } = require('./services/graphEngine');
 const dbService = require('./services/dbService');
 
 const app = express();
@@ -180,6 +182,34 @@ app.delete(['/api/reputation/watchlist/:id', '/reputation/watchlist/:id', '/watc
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: 'Failed to remove from watchlist.' });
+  }
+});
+
+/**
+ * Pre-Sign Transaction Simulation Endpoint (ReputeX v3)
+ */
+app.post(['/api/reputation/simulate', '/reputation/simulate', '/simulate'], async (req, res) => {
+  try {
+    const simResult = await simulateTransaction(req.body);
+    res.json(simResult);
+  } catch (err) {
+    console.error('Error in simulation endpoint:', err);
+    res.status(500).json({ error: 'Failed to execute pre-sign transaction simulation.' });
+  }
+});
+
+/**
+ * Network Graph Visualization Topology Endpoint (ReputeX v3)
+ */
+app.get(['/api/reputation/graph/:address', '/reputation/graph/:address', '/graph/:address'], async (req, res) => {
+  try {
+    const address = req.params.address;
+    if (!address) return res.status(400).json({ error: 'Address is required.' });
+    const graphData = await generateCounterpartyGraph(address);
+    res.json(graphData);
+  } catch (err) {
+    console.error('Error in graph endpoint:', err);
+    res.status(500).json({ error: 'Failed to generate network counterparty graph.' });
   }
 });
 

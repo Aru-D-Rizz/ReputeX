@@ -90,6 +90,7 @@
       <div class="result-tabs">
         <button class="result-tab active" data-tab="score">📊 Score</button>
         <button class="result-tab" data-tab="details">🔍 Details</button>
+        <button class="result-tab" data-tab="graph">🕸️ Graph</button>
         <button class="result-tab" data-tab="chat">💬 AI Chat</button>
         <button class="result-tab" data-tab="history">📋 History</button>
       </div>
@@ -165,7 +166,20 @@
         </div>
       </div>
 
-      <!-- Tab 3: Natural Language AI Chat -->
+      <!-- Tab 3: Network Graph Visualization -->
+      <div class="tab-pane hidden" id="pane-graph">
+        <div class="graph-section">
+          <div class="graph-header">
+            <span class="section-title">2D/3D Counterparty Network Graph</span>
+          </div>
+          <div class="graph-canvas-container" id="graph-canvas-container"></div>
+          <div class="graph-controls">
+            <span id="graph-status-text" class="graph-status">1-Hop & 2-Hop Proximity Topology</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 4: Natural Language AI Chat -->
       <div class="tab-pane hidden" id="pane-chat">
         <div class="chatbox-section">
           <div class="chatbox-title">💬 Ask ReputeX AI Assistant</div>
@@ -182,7 +196,7 @@
         </div>
       </div>
 
-      <!-- Tab 4: Scan History -->
+      <!-- Tab 5: Scan History -->
       <div class="tab-pane hidden" id="pane-history">
         <div class="history-section">
           <div class="history-header">
@@ -199,6 +213,7 @@
 
   </div>
 
+  <script src="../lib/vis-network.min.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

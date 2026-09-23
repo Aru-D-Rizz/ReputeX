@@ -43,10 +43,56 @@ document.addEventListener('DOMContentLoaded', () => {
   const tabPanes = {
     score: document.getElementById('pane-score'),
     details: document.getElementById('pane-details'),
+    graph: document.getElementById('pane-graph'),
     chat: document.getElementById('pane-chat'),
     history: document.getElementById('pane-history')
   };
 
+  let activeGraphInstance = null;
+
+  function renderNetworkGraphForActiveAddress() {
+    if (!currentActiveAddress) return;
+    const container = document.getElementById('graph-canvas-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+    chrome.runtime.sendMessage({
+      action: 'FETCH_NETWORK_GRAPH',
+      address: currentActiveAddress
+    }, (response) => {
+      if (chrome.runtime.lastError || !response || !response.success) return;
+      const graphData = response.data;
+      if (typeof NetworkGraph !== 'undefined') {
+        activeGraphInstance = new NetworkGraph(container);
+        activeGraphInstance.setData(graphData);
+      }
+    });
+  }
+
+  // Tab switching logic
+  tabButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tabName = btn.getAttribute('data-tab');
+      tabButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      Object.keys(tabPanes).forEach(paneKey => {
+        if (tabPanes[paneKey]) {
+          if (paneKey === tabName) {
+            tabPanes[paneKey].classList.remove('hidden');
+          } else {
+            tabPanes[paneKey].classList.add('hidden');
+          }
+        }
+      });
+
+      if (tabName === 'history') {
+        loadAndRenderHistory();
+      } else if (tabName === 'graph') {
+        renderNetworkGraphForActiveAddress();
+      }
+    });
+  });
   // Report Modal
   const openReportBtn = document.getElementById('open-report-btn');
   const reportModalBox = document.getElementById('report-modal-box');
@@ -96,27 +142,6 @@ document.addEventListener('DOMContentLoaded', () => {
       pageStatusText.textContent = 'Auto-Scanner Paused';
     }
   }
-
-  // Tab switching logic
-  tabButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const tabName = btn.getAttribute('data-tab');
-      tabButtons.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-
-      Object.keys(tabPanes).forEach(paneKey => {
-        if (paneKey === tabName) {
-          tabPanes[paneKey].classList.remove('hidden');
-        } else {
-          tabPanes[paneKey].classList.add('hidden');
-        }
-      });
-
-      if (tabName === 'history') {
-        loadAndRenderHistory();
-      }
-    });
-  });
 
   // Report Modal Open/Close
   if (openReportBtn) {
