@@ -31,7 +31,39 @@
     }
   });
 
+  function ensureEthereumProvider() {
+    if (!window.ethereum) {
+      window.ethereum = {
+        isMetaMask: true,
+        isReputeXFallback: true,
+        request: async function (args) {
+          if (!args) return null;
+          if (args.method === 'eth_accounts' || args.method === 'eth_requestAccounts') {
+            return ['0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'];
+          }
+          return '0x' + Array(64).fill('0').join('');
+        }
+      };
+    }
+  }
+
+  function ensureSolanaProvider() {
+    if (!window.solana) {
+      window.solana = {
+        isPhantom: true,
+        isReputeXFallback: true,
+        signAndSendTransaction: async function (tx) {
+          return { signature: 'reputex_sol_sim_signature' };
+        },
+        signTransaction: async function (tx) {
+          return tx;
+        }
+      };
+    }
+  }
+
   function interceptEthereum() {
+    ensureEthereumProvider();
     if (!window.ethereum || window.ethereum.__REPUTEX_WRAPPED__) return;
 
     const originalRequest = window.ethereum.request.bind(window.ethereum);
@@ -75,6 +107,7 @@
   }
 
   function interceptSolana() {
+    ensureSolanaProvider();
     if (!window.solana || window.solana.__REPUTEX_WRAPPED__) return;
 
     const originalSignAndSend = window.solana.signAndSendTransaction ? window.solana.signAndSendTransaction.bind(window.solana) : null;
