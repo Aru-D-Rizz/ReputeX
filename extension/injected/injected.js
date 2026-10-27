@@ -2,6 +2,7 @@
  * ReputeX v3 Injected Provider Wrapper Script
  * Runs in main page context (document_start) via web_accessible_resources.
  * Intercepts Web3 provider transaction signing methods to enable pre-sign simulation.
+ * Includes complete EIP-1193 fallback mock so Remix IDE & dApps work without MetaMask.
  */
 (function () {
   if (window.__REPUTEX_INJECTED__) return;
@@ -36,12 +37,39 @@
       window.ethereum = {
         isMetaMask: true,
         isReputeXFallback: true,
+        on: function (event, handler) {},
+        removeListener: function (event, handler) {},
         request: async function (args) {
-          if (!args) return null;
-          if (args.method === 'eth_accounts' || args.method === 'eth_requestAccounts') {
+          if (!args || !args.method) return null;
+          const m = args.method;
+
+          if (m === 'eth_accounts' || m === 'eth_requestAccounts') {
             return ['0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'];
           }
-          return '0x' + Array(64).fill('0').join('');
+          if (m === 'eth_chainId') {
+            return '0x1'; // Ethereum Mainnet (Chain 1)
+          }
+          if (m === 'net_version') {
+            return '1';
+          }
+          if (m === 'eth_getBalance') {
+            return '0x56bc75e2d63100000'; // 100 ETH
+          }
+          if (m === 'eth_gasPrice') {
+            return '0x4a817c800'; // 20 Gwei
+          }
+          if (m === 'eth_estimateGas') {
+            return '0x5208'; // 21,000 gas
+          }
+          if (m === 'eth_blockNumber') {
+            return '0x13ba4b0';
+          }
+          if (m === 'eth_getTransactionCount') {
+            return '0x1';
+          }
+
+          // Return dummy tx hash for any other write methods
+          return '0x' + Array(64).fill('a').join('');
         }
       };
     }
