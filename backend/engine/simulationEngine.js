@@ -81,7 +81,7 @@ async function simulateTransaction(payload) {
     if (cleanData.includes(cleanScam)) {
       warnings.push({
         severity: 'CRITICAL',
-        message: 🚨 MALICIOUS DRAINER DETECTED: Transaction/bytecode references flagged scam address (...) associated with !
+        message: '🚨 MALICIOUS DRAINER DETECTED: Transaction references flagged scam address (' + scamAddr + ') associated with ' + (info.details || info.type) + '!'
       });
       break;
     }
@@ -93,7 +93,7 @@ async function simulateTransaction(payload) {
     if (valueETH > 0) {
       warnings.push({
         severity: 'HIGH',
-        message: ⚠️ Payable Deployment: Sending  ETH to newly created unverified contract.
+        message: '⚠️ Payable Deployment: Sending ' + valueETH.toFixed(4) + ' ETH to newly created unverified contract.'
       });
     }
   }

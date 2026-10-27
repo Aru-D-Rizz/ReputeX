@@ -21,6 +21,17 @@
 
   const pendingRequests = new Map();
 
+  function registerPending(requestId, entry) {
+    entry.timeout = setTimeout(() => {
+      if (pendingRequests.has(requestId)) {
+        console.warn('[ReputeX] Pre-sign simulation timed out (25s), auto-proceeding to wallet.');
+        pendingRequests.delete(requestId);
+        if (typeof entry.onProceed === 'function') entry.onProceed();
+      }
+    }, 25000);
+    registerPending(requestId, entry);
+  }
+
   // Listen for simulation user approval/rejection responses from ReputeX content script
   window.addEventListener('message', (event) => {
     if (event.source !== window) return;
@@ -30,6 +41,7 @@
     const pending = pendingRequests.get(data.requestId);
     if (!pending) return;
 
+    if (pending.timeout) clearTimeout(pending.timeout);
     pendingRequests.delete(data.requestId);
 
     if (data.action === 'PROCEED') {
@@ -117,7 +129,7 @@
       const requestId = 'reputex_sim_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
 
       return new Promise((resolve, reject) => {
-        pendingRequests.set(requestId, {
+        registerPending(requestId, {
           onProceed: () => {
             if (origRequest) {
               origRequest(args).then(resolve).catch(reject);
@@ -149,7 +161,7 @@
         const interceptedItem = payload.find(item => item && INTERCEPTED_METHODS.has(item.method));
         if (interceptedItem) {
           const requestId = 'reputex_sim_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
-          pendingRequests.set(requestId, {
+          registerPending(requestId, {
             onProceed: () => {
               if (origSendAsync) {
                 origSendAsync(payload, callback);
@@ -190,7 +202,7 @@
 
       if (payload && INTERCEPTED_METHODS.has(payload.method)) {
         const requestId = 'reputex_sim_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
-        pendingRequests.set(requestId, {
+        registerPending(requestId, {
           onProceed: () => {
             if (origSendAsync) {
               origSendAsync(payload, callback);
@@ -287,7 +299,7 @@
         const requestId = 'reputex_sim_sol_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
 
         return new Promise((resolve, reject) => {
-          pendingRequests.set(requestId, {
+          registerPending(requestId, {
             onProceed: () => {
               originalSignAndSend(transaction, options).then(resolve).catch(reject);
             },

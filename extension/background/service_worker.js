@@ -460,7 +460,7 @@ async function fetchTransactionSimulation(payload) {
       riskCategory = 'CRITICAL';
       warnings.push({
         severity: 'CRITICAL',
-        message: 🚨 MALICIOUS DRAINER DETECTED: Bytecode/calldata references flagged scam address (...) []!
+        message: '🚨 MALICIOUS DRAINER DETECTED: Bytecode/calldata references flagged scam address (' + drainer.addr + ') [' + drainer.label + ']!'
       });
       break;
     }
