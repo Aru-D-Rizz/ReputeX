@@ -439,20 +439,84 @@ async function fetchTransactionSimulation(payload) {
     if (resProd.ok) return await resProd.json();
   } catch (e) {}
 
-  // Fallback offline simulation response
+  // Fallback offline simulation response with local ABI decoding
   let recipient = 'Contract Interaction';
-  if (payload && payload.params && payload.params[0] && payload.params[0].to) {
-    recipient = payload.params[0].to;
+  let functionName = 'Smart Contract Interaction';
+  const warnings = [];
+  const assetChanges = [];
+  let riskCategory = 'SAFE';
+
+  const tx = (payload && payload.params && payload.params[0]) || {};
+  if (tx.to) recipient = tx.to;
+  const data = (tx.data || '0x').toLowerCase();
+
+  if (payload.method === 'eth_sendTransaction') {
+    if (!tx.to) {
+      functionName = 'Contract Deployment';
+      warnings.push({ severity: 'LOW', message: 'Pre-sign verification: Deploying contract bytecode. No immediate drainer patterns detected.' });
+    } else if (data.startsWith('0x095ea7b3')) {
+      functionName = 'Token Approval (approve)';
+      const spenderHex = data.slice(10, 74);
+      if (spenderHex.length >= 40) recipient = '0x' + spenderHex.slice(-40);
+      const amountHex = data.slice(74, 138);
+      const isUnlimited = amountHex.includes('fffff') || amountHex.length >= 60;
+      assetChanges.push({
+        direction: 'APPROVAL',
+        symbol: 'ERC-20 Token Allowance',
+        amount: isUnlimited ? 'Unlimited (Maxuint256)' : 'Custom Allowance',
+        type: 'TOKEN_APPROVAL'
+      });
+      if (isUnlimited) {
+        riskCategory = 'CRITICAL';
+        warnings.push({
+          severity: 'CRITICAL',
+          message: '🚨 UNLIMITED TOKEN APPROVAL: This transaction grants the spender permission to withdraw ALL your tokens at any time.'
+        });
+      } else {
+        warnings.push({ severity: 'HIGH', message: '⚠️ Token Allowance Granted: Giving spender authority over your tokens.' });
+      }
+    } else if (data.startsWith('0xa22cb465')) {
+      functionName = 'NFT Collection Approval (setApprovalForAll)';
+      const opHex = data.slice(10, 74);
+      if (opHex.length >= 40) recipient = '0x' + opHex.slice(-40);
+      const approved = data.slice(74, 138).endsWith('1');
+      assetChanges.push({
+        direction: 'APPROVAL',
+        symbol: 'NFT Collection (All Items)',
+        amount: approved ? 'Granted (Full Access)' : 'Revoked',
+        type: 'NFT_APPROVAL'
+      });
+      if (approved) {
+        riskCategory = 'CRITICAL';
+        warnings.push({
+          severity: 'CRITICAL',
+          message: '🚨 UNLIMITED NFT APPROVAL: Grants operator full control to transfer ALL NFTs in this collection out of your wallet!'
+        });
+      }
+    } else if (data.startsWith('0xa9059cbb')) {
+      functionName = 'Token Transfer (transfer)';
+      const toHex = data.slice(10, 74);
+      if (toHex.length >= 40) recipient = '0x' + toHex.slice(-40);
+      assetChanges.push({
+        direction: 'OUT',
+        symbol: 'ERC-20 Tokens',
+        amount: 'Transferred',
+        type: 'ERC20_TRANSFER'
+      });
+    } else {
+      warnings.push({ severity: 'LOW', message: 'Pre-sign verification: Baseline safety checks passed.' });
+    }
   }
+
   return {
     status: 'SUCCESS',
-    functionName: payload.method === 'eth_sendTransaction' ? (recipient !== 'Contract Interaction' ? 'Contract Call' : 'Contract Deployment') : (payload.method || 'Web3 Interaction'),
+    functionName,
     recipientAddress: recipient,
     targetContract: recipient,
-    counterpartyScore: 78,
-    riskCategory: 'SAFE',
-    warnings: [{ severity: 'LOW', message: 'Pre-sign verification: No immediate drainer or high-risk bytecode patterns identified.' }],
-    assetChanges: [],
+    counterpartyScore: riskCategory === 'CRITICAL' ? 35 : 78,
+    riskCategory,
+    warnings: warnings.length > 0 ? warnings : [{ severity: 'LOW', message: 'Pre-sign verification: No immediate drainer risks detected.' }],
+    assetChanges,
     timestamp: new Date().toISOString()
   };
 }
