@@ -5,6 +5,7 @@
  */
 const { fetchWalletMetrics } = require('../services/dataAggregator');
 const { calculateReputation } = require('./xaiEngine');
+const scamData = require('../data/scamDatabase.json');
 
 const SELECTORS = {
   APPROVE: '0x095ea7b3',             // approve(address,uint256)
@@ -70,6 +71,31 @@ async function simulateTransaction(payload) {
       amount: valueETH.toFixed(4),
       type: 'NATIVE'
     });
+  }
+
+  // Bytecode & Calldata Scan for Flagged Scam / Drainer Addresses
+  const cleanData = data.replace(/^0x/, '');
+  for (const [scamAddr, info] of Object.entries(scamData.knownScams || {})) {
+    if (scamAddr === '0x0000000000000000000000000000000000000000') continue;
+    const cleanScam = scamAddr.slice(2).toLowerCase();
+    if (cleanData.includes(cleanScam)) {
+      warnings.push({
+        severity: 'CRITICAL',
+        message: 🚨 MALICIOUS DRAINER DETECTED: Transaction/bytecode references flagged scam address (...) associated with !
+      });
+      break;
+    }
+  }
+
+  // Contract Deployment Analysis
+  if (!txObj.to || targetContract === '0x0000000000000000000000000000000000000000') {
+    functionName = 'Contract Deployment';
+    if (valueETH > 0) {
+      warnings.push({
+        severity: 'HIGH',
+        message: ⚠️ Payable Deployment: Sending  ETH to newly created unverified contract.
+      });
+    }
   }
 
   // ABI Selector Decoding

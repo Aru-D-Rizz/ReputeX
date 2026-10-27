@@ -450,6 +450,22 @@ async function fetchTransactionSimulation(payload) {
   if (tx.to) recipient = tx.to;
   const data = (tx.data || '0x').toLowerCase();
 
+  const KNOWN_DRAINERS = [
+    { addr: '0x70997970c51812dc3a010c7d01b50e0d17dc79c8', label: 'Active NFT/Token approval drainer' },
+    { addr: '0x3c44cdd0467883860680aaaba2e038246876756b', label: 'Phishing airdrop & drainer issuer' }
+  ];
+
+  for (const drainer of KNOWN_DRAINERS) {
+    if (data.includes(drainer.addr.slice(2))) {
+      riskCategory = 'CRITICAL';
+      warnings.push({
+        severity: 'CRITICAL',
+        message: 🚨 MALICIOUS DRAINER DETECTED: Bytecode/calldata references flagged scam address (...) []!
+      });
+      break;
+    }
+  }
+
   if (payload.method === 'eth_sendTransaction') {
     if (!tx.to) {
       functionName = 'Contract Deployment';
