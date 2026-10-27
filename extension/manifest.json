@@ -14,7 +14,9 @@
     "storage"
   ],
   "host_permissions": [
-    "https://*/*"
+    "https://*/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
   ],
   "web_accessible_resources": [
     {
@@ -28,9 +30,16 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
+      "js": ["content/inject_loader.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    },
+    {
+      "matches": ["<all_urls>"],
       "js": ["content/content.js"],
       "css": ["content/content.css"],
-      "run_at": "document_end"
+      "run_at": "document_end",
+      "all_frames": true
     }
   ],
   "action": {

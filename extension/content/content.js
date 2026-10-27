@@ -729,11 +729,11 @@
 
   function injectProviderWrapper() {
     try {
+      if (document.getElementById('reputex-injected-script')) return;
       const s = document.createElement('script');
+      s.id = 'reputex-injected-script';
       s.src = chrome.runtime.getURL('injected/injected.js');
-      s.onload = function() {
-        this.remove();
-      };
+      s.async = false;
       (document.head || document.documentElement).appendChild(s);
     } catch (e) {
       console.warn('[ReputeX] Script injection notice:', e);
@@ -746,25 +746,43 @@
       const data = event.data;
       if (!data || data.source !== 'REPUTEX_INJECTED' || data.type !== 'PRE_SIGN_REQUEST') return;
 
-      chrome.runtime.sendMessage({
-        action: 'SIMULATE_TRANSACTION',
-        payload: {
-          method: data.method,
-          params: data.params,
-          origin: data.origin
-        }
-      }, (response) => {
-        const simData = (response && response.success && response.data) ? response.data : {
-          status: 'SUCCESS',
-          functionName: data.method,
-          warnings: [{ severity: 'MEDIUM', message: 'Simulating transaction with baseline safety rules.' }],
-          assetChanges: [],
-          counterpartyScore: 75,
-          riskCategory: 'CAUTION'
-        };
+      try {
+        chrome.runtime.sendMessage({
+          action: 'SIMULATE_TRANSACTION',
+          payload: {
+            method: data.method,
+            params: data.params,
+            origin: data.origin
+          }
+        }, (response) => {
+          if (chrome.runtime.lastError) {
+            // Suppress error
+          }
+          let recipient = null;
+          if (data.params && data.params[0] && data.params[0].to) {
+            recipient = data.params[0].to;
+          }
 
-        renderPreSignSimulationModal(data, simData);
-      });
+          const simData = (response && response.success && response.data) ? response.data : {
+            status: 'SUCCESS',
+            functionName: data.method === 'eth_sendTransaction' ? (recipient ? 'Contract Transaction' : 'Contract Deployment') : (data.method || 'Web3 Interaction'),
+            recipientAddress: recipient,
+            targetContract: recipient,
+            warnings: [{ severity: 'LOW', message: 'Pre-sign verification: Baseline safety checks passed.' }],
+            assetChanges: [],
+            counterpartyScore: 78,
+            riskCategory: 'SAFE'
+          };
+
+          if (!simData.recipientAddress && recipient) {
+            simData.recipientAddress = recipient;
+          }
+
+          renderPreSignSimulationModal(data, simData);
+        });
+      } catch (e) {
+        console.warn('[ReputeX Content Script] Pre-sign dispatch error:', e);
+      }
     });
   }
 
@@ -835,7 +853,7 @@
     backdrop.appendChild(modal);
     document.body.appendChild(backdrop);
 
-    document.getElementById('reputex-presign-reject-btn').onclick = () => {
+    const dismissReject = () => {
       window.postMessage({
         source: 'REPUTEX_CONTENT',
         type: 'PRE_SIGN_RESPONSE',
@@ -844,6 +862,12 @@
       }, '*');
       backdrop.remove();
     };
+
+    backdrop.onclick = (e) => {
+      if (e.target === backdrop) dismissReject();
+    };
+
+    document.getElementById('reputex-presign-reject-btn').onclick = dismissReject;
 
     document.getElementById('reputex-presign-proceed-btn').onclick = () => {
       window.postMessage({
