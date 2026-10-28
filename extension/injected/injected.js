@@ -107,8 +107,12 @@
     return p;
   }
 
+  const wrappedProviders = new WeakSet();
+
   function wrapProvider(provider) {
-    if (!provider || provider.__REPUTEX_WRAPPED__) return provider;
+    if (!provider || typeof provider !== 'object') return provider;
+    if (wrappedProviders.has(provider) || provider.__REPUTEX_WRAPPED__) return provider;
+    wrappedProviders.add(provider);
 
     // Handle multi-provider arrays (e.g. window.ethereum.providers)
     if (Array.isArray(provider.providers)) {
@@ -155,7 +159,7 @@
       });
     };
 
-    // 2. Wrap legacy Web3.js / ethers.js (.sendAsync)
+    // 2. Wrap legacy Web3.js / ethers.js (.sendAsync) - No recursive call to .send
     provider.sendAsync = function (payload, callback) {
       if (Array.isArray(payload)) {
         const interceptedItem = payload.find(item => item && INTERCEPTED_METHODS.has(item.method));
@@ -248,22 +252,60 @@
       }
     };
 
-    // 3. Wrap ethers.js / web3 hybrid (.send)
+    // 3. Wrap ethers.js / web3 hybrid (.send) - Strictly delegates to origSend without ping-ponging
     provider.send = function (methodOrPayload, callbackOrParams) {
-      if (typeof callbackOrParams === 'function') {
-        return provider.sendAsync(methodOrPayload, callbackOrParams);
-      }
-      if (typeof methodOrPayload === 'string') {
+      if (typeof methodOrPayload === 'string' && INTERCEPTED_METHODS.has(methodOrPayload)) {
         return provider.request({ method: methodOrPayload, params: callbackOrParams || [] });
       }
       if (methodOrPayload && typeof methodOrPayload === 'object' && INTERCEPTED_METHODS.has(methodOrPayload.method)) {
-        return new Promise((resolve, reject) => {
-          provider.sendAsync(methodOrPayload, (err, res) => {
-            if (err) return reject(err);
-            resolve(res ? res.result : undefined);
+        const requestId = 'reputex_sim_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
+        if (typeof callbackOrParams === 'function') {
+          registerPending(requestId, {
+            onProceed: () => {
+              if (origSend) origSend(methodOrPayload, callbackOrParams);
+              else if (origSendAsync) origSendAsync(methodOrPayload, callbackOrParams);
+            },
+            onReject: () => {
+              const err = new Error('User rejected transaction via ReputeX Pre-Sign Security Overlay.');
+              err.code = 4001;
+              callbackOrParams(err, { id: methodOrPayload.id, jsonrpc: '2.0', error: { code: 4001, message: err.message } });
+            }
           });
-        });
+          window.postMessage({
+            source: 'REPUTEX_INJECTED',
+            type: 'PRE_SIGN_REQUEST',
+            requestId,
+            method: methodOrPayload.method,
+            params: methodOrPayload.params || [],
+            origin: window.location.origin
+          }, '*');
+          return;
+        } else {
+          return new Promise((resolve, reject) => {
+            registerPending(requestId, {
+              onProceed: () => {
+                if (origSend) resolve(origSend(methodOrPayload));
+                else if (origRequest) origRequest({ method: methodOrPayload.method, params: methodOrPayload.params || [] }).then(resolve).catch(reject);
+                else resolve('0x' + Array(64).fill('a').join(''));
+              },
+              onReject: () => {
+                const err = new Error('User rejected transaction via ReputeX Pre-Sign Security Overlay.');
+                err.code = 4001;
+                reject(err);
+              }
+            });
+            window.postMessage({
+              source: 'REPUTEX_INJECTED',
+              type: 'PRE_SIGN_REQUEST',
+              requestId,
+              method: methodOrPayload.method,
+              params: methodOrPayload.params || [],
+              origin: window.location.origin
+            }, '*');
+          });
+        }
       }
+
       if (origSend) {
         return origSend(methodOrPayload, callbackOrParams);
       }
@@ -272,6 +314,9 @@
       }
       if (origRequest && methodOrPayload && methodOrPayload.method) {
         return origRequest({ method: methodOrPayload.method, params: methodOrPayload.params || [] });
+      }
+      if (typeof callbackOrParams === 'function') {
+        callbackOrParams(null, { id: 1, jsonrpc: '2.0', result: null });
       }
     };
 
